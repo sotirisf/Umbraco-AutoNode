@@ -1,7 +1,7 @@
 # Umbraco-AutoNode
 This is a simple plugin that automatically creates new child nodes in the Umbraco back end upon publishing a node, based on a set of user-defined rules.
 
-You can download the plugin directly from here: https://github.com/sotirisf/Umbraco-AutoNode/blob/master/Package/DotSee.AutoNode_1.0.zip
+You can download the compiled plugin directly from here and install it in your Umbraco site: https://github.com/sotirisf/Umbraco-AutoNode/blob/master/Package/DotSee.AutoNode_1.0.zip
 
 ## Usage
 On application start, you can register one or more rules for the package. A sample event handler is already included in the package, with a rule example (commented out). 
