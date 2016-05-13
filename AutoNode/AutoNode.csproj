@@ -253,6 +253,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AutoNodeBootstrapper.cs" />
     <Compile Include="AutoNodeRule.cs" />
     <Compile Include="AutoNode.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
