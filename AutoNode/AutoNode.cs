@@ -70,7 +70,7 @@ namespace DotSee
         {
             string createdDocTypeAlias = node.ContentType.Alias;
 
-            bool hasChildren = node.Children().DefaultIfEmpty().Count() > 0;
+            bool hasChildren = node.Children().Any();
 
             foreach (AutoNodeRule rule in _rules)
             {
@@ -137,7 +137,11 @@ namespace DotSee
             //If it exists already, abort process
             if
                (
-                node.Children().Where(x => x.ContentType.Alias.Equals(rule.DocTypeAliasToCreate)).Count() > 0
+                node.Children()
+                .Where(x => 
+                    x.ContentType.Alias.ToLower().Equals(rule.DocTypeAliasToCreate.ToLower()) && 
+                    x.Name.ToLower().Equals(rule.NodeName.ToLower()))
+                    .Any()
                ) return;
 
             ///Get a content service reference
