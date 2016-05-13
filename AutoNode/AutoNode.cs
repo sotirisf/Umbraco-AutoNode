@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Xml;
+using umbraco;
 using Umbraco.Core;
 using Umbraco.Core.Models;
 using Umbraco.Core.Services;
+using System.Web.Hosting;
+using System.IO;
 
 namespace DotSee
 {
@@ -32,14 +36,17 @@ namespace DotSee
         /// Returns a (singleton) AutoNode instance
         /// </summary>
         public static AutoNode Instance { get { return _instance.Value; } }
-        
+
+
         /// <summary>
         /// Private constructor for Singleton
         /// </summary>
         private AutoNode()
         {
-
             _rules = new List<AutoNodeRule>();
+
+            ///Get rules from the config file. Any rules programmatically declared later on will be added too.
+            GetRulesFromConfigFile();
         }
 
         #endregion
@@ -80,6 +87,42 @@ namespace DotSee
         #region Private Methods
 
         /// <summary>
+        /// Gets rules from /config/autoNode.config file (if it exists)
+        /// </summary>
+        private void GetRulesFromConfigFile()
+        {
+            XmlDocument xmlConfig = new XmlDocument();
+
+            try
+            {
+                xmlConfig.Load(HostingEnvironment.MapPath(GlobalSettings.Path + "/../config/autoNode.config"));
+            }
+            catch (FileNotFoundException ex) { return; }
+            catch (Exception ex)
+            {
+                Umbraco.Core.Logging.LogHelper.Error(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "There was a problem loading AutoNode configuration from the config file", ex);
+                return;
+            }
+
+            foreach (XmlNode xmlConfigEntry in xmlConfig.SelectNodes("/autoNode/rule"))
+            {
+                if (xmlConfigEntry.NodeType == XmlNodeType.Element)
+                {
+                    string CreatedDocTypeAlias = xmlConfigEntry.Attributes["createdDocTypeAlias"].Value;
+                    string DocTypeAliasToCreate = xmlConfigEntry.Attributes["docTypeAliasToCreate"].Value;
+                    string NodeName = xmlConfigEntry.Attributes["nodeName"].Value;
+                    bool BringNewNodeFirst = bool.Parse(xmlConfigEntry.Attributes["bringNewNodeFirst"].Value);
+                    bool OnlyCreateIfNoChildren = bool.Parse(xmlConfigEntry.Attributes["onlyCreateIfNoChildren"].Value);
+
+                    var rule = new AutoNodeRule(CreatedDocTypeAlias, DocTypeAliasToCreate, NodeName, BringNewNodeFirst, OnlyCreateIfNoChildren);
+                    _rules.Add(rule);
+
+                }
+            }
+        }
+
+
+        /// <summary>
         /// Creates a new node under a given node, according to settings of the rule in effect
         /// </summary>
         /// <param name="node">The node to create a new node under</param>
@@ -100,13 +143,6 @@ namespace DotSee
                     x.Name.ToLower().Equals(rule.NodeName.ToLower()))
                     .Any()
                ) return;
-
-            var y = node.Children();
-            foreach (var yy in y)
-            {
-                var dummy1 = yy.ContentType.Alias;
-                var dummy2 = yy.ContentType.Name;
-            }
 
             ///Get a content service reference
             IContentService cs = ApplicationContext.Current.Services.ContentService;
