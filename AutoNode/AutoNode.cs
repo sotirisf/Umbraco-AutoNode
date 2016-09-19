@@ -144,22 +144,36 @@ namespace DotSee
                 return;
             }
 
-            //If it exists already, abort process
-            if
-               (
-                node.Children()
-                .Where(x =>
-                    x.ContentType.Alias.ToLower().Equals(rule.DocTypeAliasToCreate.ToLower()) &&
-                    x.Name.ToLower().Equals(rule.NodeName.ToLower()))
-                    .Any()
-               )
-            {
-                Umbraco.Core.Logging.LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Aborting node creation since node already exists");
-                return;
-            }
+            var existingNode = node.Children()
+            .Where(x =>
+                x.ContentType.Alias.ToLower().Equals(rule.DocTypeAliasToCreate.ToLower()) &&
+                x.Name.ToLower().Equals(rule.NodeName.ToLower())).FirstOrDefault();
+
             ///Get a content service reference
             IContentService cs = ApplicationContext.Current.Services.ContentService;
 
+            //If it exists already
+            if (existingNode != null)
+            {
+                //If it is already published or if the parent is NOT published, abort process.
+                if (existingNode.Published || !node.Published)
+                {
+                    Umbraco.Core.Logging.LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Aborting node creation since node already exists");
+                    return;
+                }
+
+                //If it exists already but is not published and parent is published, republish
+                if (!existingNode.Published && node.Published)
+                {
+                    Umbraco.Core.Logging.LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Republishing already existing child node...");
+
+                    //Republish the node
+                    cs.SaveAndPublishWithStatus(existingNode, raiseEvents: true);
+                    return;
+                }
+            }
+
+            //If it doesn't exist, then create it and publish it.
             try
             {
                 ///Create and publish the new node
