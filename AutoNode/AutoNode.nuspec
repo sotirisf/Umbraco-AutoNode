@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>$id$</id>
+    <version>$version$</version>
+    <title>$title$</title>
+    <authors>Sotiris Filippidis</authors>
+    <owners>Sotiris Filippidis</owners>
+    <projectUrl>https://github.com/sotirisf/Umbraco-AutoNode.git</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>This is a simple plugin that automatically creates new child nodes in the Umbraco back end upon publishing a node, based on a set of user-defined rules.</description>
+    <copyright>Copyright 2016</copyright>
+    <tags>umbraco autonode</tags>
+    <references>
+      <reference file="DotSee.AutoNode.dll" />
+    </references>
+    <dependencies>
+      <dependency id="UmbracoCms.Core" version="7.2.7" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="autoNode.config" target="content\Config" />
+  </files>
+</package>
