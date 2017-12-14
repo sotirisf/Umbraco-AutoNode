@@ -20,10 +20,14 @@ namespace DotSee
 
         private void ContentServiceSaved(IContentService sender, SaveEventArgs<IContent> args)
         {
-
+            var hasBeenExcute = false;
             foreach (IContent node in args.SavedEntities)
             {
-                AutoNode.Instance.Run(node);
+                hasBeenExcute = AutoNode.Instance.Run(node);
+            }
+            if (hasBeenExcute)
+            {
+                umbraco.content.Instance.RefreshContentFromDatabase();
             }
         }
 
