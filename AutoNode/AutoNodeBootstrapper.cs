@@ -1,6 +1,7 @@
 ﻿using Umbraco.Core;
 using Umbraco.Core.Events;
 using Umbraco.Core.Models;
+using Umbraco.Core.Publishing;
 using Umbraco.Core.Services;
 
 namespace DotSee
@@ -14,21 +15,16 @@ namespace DotSee
 
             AutoNode au = AutoNode.Instance;
 
-            ContentService.Saved += ContentServiceSaved;
+            ContentService.Published += ContentServicePublished;
 
         }
 
-        private void ContentServiceSaved(IContentService sender, SaveEventArgs<IContent> args)
-        {
-            var hasBeenExcute = false;
-            foreach (IContent node in args.SavedEntities)
+        private void ContentServicePublished(IPublishingStrategy sender, PublishEventArgs<IContent> e)
+        {            
+            foreach (var node in e.PublishedEntities)
             {
-                hasBeenExcute = AutoNode.Instance.Run(node);
-            }
-            if (hasBeenExcute)
-            {
-                umbraco.content.Instance.RefreshContentFromDatabase();
-            }
+                AutoNode.Instance.Run(node);
+            }            
         }
 
 

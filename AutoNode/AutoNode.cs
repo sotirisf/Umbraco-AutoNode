@@ -66,24 +66,20 @@ namespace DotSee
         /// Applies all rules on creation of a node. 
         /// </summary>
         /// <param name="node">The newly created node we need to apply rules for</param>
-        public bool Run(IContent node)
+        public void Run(IContent node)
         {
             string createdDocTypeAlias = node.ContentType.Alias;
 
             bool hasChildren = node.Children().Any();
-
-            bool hasBeenExcute = false;
-
+            
             foreach (AutoNodeRule rule in _rules)
             {
                 if (rule.CreatedDocTypeAlias.Equals(createdDocTypeAlias))
                 {
-                    CreateNewNode(node, rule, hasChildren);
-                    hasBeenExcute = true;
+                    CreateNewNode(node, rule, hasChildren);                    
                 }
 
-            }
-            return hasBeenExcute;
+            }            
         }
 
         #endregion
