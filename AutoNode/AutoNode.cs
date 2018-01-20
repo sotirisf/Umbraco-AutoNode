@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Web.Hosting;
 using System.Xml;
 using umbraco;
 using Umbraco.Core;
+using Umbraco.Core.Logging;
 using Umbraco.Core.Models;
 using Umbraco.Core.Services;
-using System.Web.Hosting;
-using System.IO;
+using Umbraco.Web;
 
 namespace DotSee
 {
@@ -98,15 +100,15 @@ namespace DotSee
                 xmlConfig.Load(HostingEnvironment.MapPath(GlobalSettings.Path + "/../config/autoNode.config"));
             }
             catch (FileNotFoundException ex) {
-                Umbraco.Core.Logging.LogHelper.Error(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Configuration file was not found.", ex);
+                LogHelper.Error(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Configuration file was not found.", ex);
                 return;
             }
             catch (Exception ex)
             {
-                Umbraco.Core.Logging.LogHelper.Error(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: There was a problem loading AutoNode configuration from the config file", ex);
+                LogHelper.Error(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: There was a problem loading AutoNode configuration from the config file", ex);
                 return;
             }
-            Umbraco.Core.Logging.LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Loading configuration...");
+            LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Loading configuration...");
             
             foreach (XmlNode xmlConfigEntry in xmlConfig.SelectNodes("/autoNode/rule"))
             {
@@ -128,12 +130,16 @@ namespace DotSee
                         ? bool.Parse(xmlConfigEntry.Attributes["createIfExistsWithDifferentName"].Value)
                         : true;
 
-                    var rule = new AutoNodeRule(CreatedDocTypeAlias, DocTypeAliasToCreate, NodeName, BringNewNodeFirst, OnlyCreateIfNoChildren, CreateIfExistsWithDifferentName);
+                    string DictionaryItemForName = (xmlConfigEntry.Attributes["dictionaryItemForName"] != null)
+                      ? xmlConfigEntry.Attributes["dictionaryItemForName"].Value
+                      : "";
+
+                    var rule = new AutoNodeRule(CreatedDocTypeAlias, DocTypeAliasToCreate, NodeName, BringNewNodeFirst, OnlyCreateIfNoChildren, CreateIfExistsWithDifferentName, DictionaryItemForName);
                     _rules.Add(rule);
 
                 }
             }
-            Umbraco.Core.Logging.LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Loading configuration complete");
+            LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Loading configuration complete");
         }
 
 
@@ -145,22 +151,28 @@ namespace DotSee
         /// <param name="hasChildren">Indicates if the node has children</param>
         private void CreateNewNode(IContent node, AutoNodeRule rule, bool hasChildren)
         {
-            Umbraco.Core.Logging.LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, string.Format("AutoNode: Trying to automatically create node of type {2} for node {0} of type {1}...", node.Id.ToString(), node.ContentType.Alias.ToString(), rule.DocTypeAliasToCreate));
+            //Get the node name that is supposed to be given to the new node.
+            string assignedNodeName = GetAssignedNodeName(node, rule);
+
+            LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, string.Format("AutoNode: Trying to automatically create node of type {2} for node {0} of type {1}...", node.Id.ToString(), node.ContentType.Alias.ToString(), rule.DocTypeAliasToCreate));
 
             //If rule says only if no children and there are children, abort process
             if (rule.OnlyCreateIfNoChildren && hasChildren)
             {
-                Umbraco.Core.Logging.LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Aborting node creation due to rule restrictions. Parent node already has children, rule indicates that parent node should not have children");
+                LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Aborting node creation due to rule restrictions. Parent node already has children, rule indicates that parent node should not have children");
                 return;
             }
 
+            //Find if an existing node is already there.
+            //If we find an existing node a new one will NOT be created.
+            //An existing node can be, depending on configuration, a node of the same type OR a node of the same type with the same name.
             var existingNode = node.Children()
             .Where(x =>
-                x.ContentType.Alias.ToLower().Equals(rule.DocTypeAliasToCreate.ToLower()))
+                x.ContentType.Alias.ToLower().Equals(rule.DocTypeAliasToCreate.ToLower()))  //Same doctype
              .Where(y=>
                 (rule.CreateIfExistsWithDifferentName)
-                 ? y.Name.ToLower().Equals(rule.NodeName.ToLower())
-                 : true
+                 ? y.Name.ToLower().Equals(assignedNodeName.ToLower()) //Same name. If found and createIfExistsWithDifferentName is true then a node will NOT be created.
+                 : true                                             //Broader, it is enough to find a node with the same doctype.
                 ).FirstOrDefault();
 
             ///Get a content service reference
@@ -172,14 +184,14 @@ namespace DotSee
                 //If it is already published or if the parent is NOT published, abort process.
                 if (existingNode.Published || !node.Published)
                 {
-                    Umbraco.Core.Logging.LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Aborting node creation since node already exists");
+                    LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Aborting node creation since node already exists");
                     return;
                 }
 
                 //If it exists already but is not published and parent is published, republish
                 if (!existingNode.Published && node.Published)
                 {
-                    Umbraco.Core.Logging.LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Republishing already existing child node...");
+                    LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Republishing already existing child node...");
 
                     //Republish the node
                     cs.SaveAndPublishWithStatus(existingNode, raiseEvents: true);
@@ -191,7 +203,8 @@ namespace DotSee
             try
             {
                 ///Create and publish the new node
-                IContent content = cs.CreateContent(rule.NodeName, node.Id, rule.DocTypeAliasToCreate);
+                //IContent content = cs.CreateContent(rule.NodeName, node.Id, rule.DocTypeAliasToCreate);
+                IContent content = cs.CreateContent(assignedNodeName, node.Id, rule.DocTypeAliasToCreate);
 
                 //Publish the new node
                 cs.SaveAndPublishWithStatus(content, raiseEvents: false);                   
@@ -199,15 +212,15 @@ namespace DotSee
                 ///Bring the new node first if rule dictates so
                 if (rule.BringNewNodeFirst)
                 {
-                    Umbraco.Core.Logging.LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Bringing newly created node first...");
+                    LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Bringing newly created node first...");
                     cs.Sort(BringLastNodeFirst(node));
                 }
 
-                Umbraco.Core.Logging.LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Node created succesfully.");
+                LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Node created succesfully.");
             }
             catch (Exception ex)
             {
-                Umbraco.Core.Logging.LogHelper.Error(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: There was a problem with new node creation. Please check that the doctype alias you have defined in rules actually exists", ex);
+                LogHelper.Error(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: There was a problem with new node creation. Please check that the doctype alias you have defined in rules actually exists", ex);
             }
            
         }
@@ -229,6 +242,37 @@ namespace DotSee
 
                 yield return child;
             }
+        }
+
+        /// <summary>
+        /// Gets the predefined name for the newly created node. This can either be a dictionary entry for multilingual installations or a standard string
+        /// </summary>
+        /// <param name="node">The node under which the new node will be created</param>
+        /// <param name="rule">The rule being processed</param>
+        /// <returns></returns>
+        private string GetAssignedNodeName(IContent node, AutoNodeRule rule)
+        {
+            string assignedNodeName = null;
+
+            //Get the dictionary item if a dictionary key has been specified in config
+            if (rule.DictionaryItemForName != "")
+            {
+                try
+                {
+                    var lsvc = ApplicationContext.Current.Services.LocalizationService;
+                    var lang = new UmbracoHelper(UmbracoContext.Current).TypedContent(node.Id).GetCulture().Name;
+                    assignedNodeName = lsvc.GetDictionaryItemByKey(rule.DictionaryItemForName).Translations.First(t => t.Language.CultureInfo.Name == lang).Value;
+                }
+                catch (Exception ex)
+                {
+                    LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: The dictionary key specified in autoNode.config was not found.");
+                }
+            }
+            
+            //If no dictionary key has been found, fallback to the standard name setting
+            if (string.IsNullOrEmpty(assignedNodeName)) { assignedNodeName = rule.NodeName; }
+
+            return (assignedNodeName);
         }
 
         #endregion
