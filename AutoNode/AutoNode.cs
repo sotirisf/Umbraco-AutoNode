@@ -115,9 +115,18 @@ namespace DotSee
                     string CreatedDocTypeAlias = xmlConfigEntry.Attributes["createdDocTypeAlias"].Value;
                     string DocTypeAliasToCreate = xmlConfigEntry.Attributes["docTypeAliasToCreate"].Value;
                     string NodeName = xmlConfigEntry.Attributes["nodeName"].Value;
-                    bool BringNewNodeFirst = bool.Parse(xmlConfigEntry.Attributes["bringNewNodeFirst"].Value);
-                    bool OnlyCreateIfNoChildren = bool.Parse(xmlConfigEntry.Attributes["onlyCreateIfNoChildren"].Value);
-                    bool CreateIfExistsWithDifferentName = bool.Parse(xmlConfigEntry.Attributes["createIfExistsWithDifferentName"].Value);
+
+                    bool BringNewNodeFirst = (xmlConfigEntry.Attributes["bringNewNodeFirst"]!=null) 
+                        ? bool.Parse(xmlConfigEntry.Attributes["bringNewNodeFirst"].Value)
+                        : false;
+
+                    bool OnlyCreateIfNoChildren = (xmlConfigEntry.Attributes["onlyCreateIfNoChildren"]!=null) 
+                        ? bool.Parse(xmlConfigEntry.Attributes["onlyCreateIfNoChildren"].Value) 
+                        : false;
+
+                    bool CreateIfExistsWithDifferentName = (xmlConfigEntry.Attributes["createIfExistsWithDifferentName"]!=null) 
+                        ? bool.Parse(xmlConfigEntry.Attributes["createIfExistsWithDifferentName"].Value)
+                        : true;
 
                     var rule = new AutoNodeRule(CreatedDocTypeAlias, DocTypeAliasToCreate, NodeName, BringNewNodeFirst, OnlyCreateIfNoChildren, CreateIfExistsWithDifferentName);
                     _rules.Add(rule);
@@ -147,9 +156,11 @@ namespace DotSee
 
             var existingNode = node.Children()
             .Where(x =>
-                x.ContentType.Alias.ToLower().Equals(rule.DocTypeAliasToCreate.ToLower()) 
-                &&
-                (rule.CreateIfExistsWithDifferentName) ? true : x.Name.ToLower().Equals(rule.NodeName.ToLower())
+                x.ContentType.Alias.ToLower().Equals(rule.DocTypeAliasToCreate.ToLower()))
+             .Where(y=>
+                (rule.CreateIfExistsWithDifferentName)
+                 ? y.Name.ToLower().Equals(rule.NodeName.ToLower())
+                 : true
                 ).FirstOrDefault();
 
             ///Get a content service reference
