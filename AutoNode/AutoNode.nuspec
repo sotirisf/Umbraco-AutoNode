@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package >
-  <metadata>
+  <metadata minClientVersion="2.8">
     <id>$id$</id>
     <version>$version$</version>
     <title>$title$</title>
@@ -15,8 +15,9 @@
       <reference file="DotSee.AutoNode.dll" />
     </references>
     <dependencies>
-      <dependency id="UmbracoCms.Core" version="7.6.0" />
+      <dependency id="UmbracoCms.Core" version="7.6.0"/>
     </dependencies>
+   
   </metadata>
   <files>
     <file src="autoNode.config" target="content\Config" />
