@@ -71,15 +71,15 @@ namespace DotSee
             string createdDocTypeAlias = node.ContentType.Alias;
 
             bool hasChildren = node.Children().Any();
-
+            
             foreach (AutoNodeRule rule in _rules)
             {
                 if (rule.CreatedDocTypeAlias.Equals(createdDocTypeAlias))
                 {
-                    CreateNewNode(node, rule, hasChildren);
+                    CreateNewNode(node, rule, hasChildren);                    
                 }
 
-            }
+            }            
         }
 
         #endregion
@@ -183,7 +183,7 @@ namespace DotSee
                 IContent content = cs.CreateContent(rule.NodeName, node.Id, rule.DocTypeAliasToCreate);
 
                 //Publish the new node
-                cs.SaveAndPublishWithStatus(content, raiseEvents: false);
+                cs.SaveAndPublishWithStatus(content, raiseEvents: false);                   
                 
                 ///Bring the new node first if rule dictates so
                 if (rule.BringNewNodeFirst)
