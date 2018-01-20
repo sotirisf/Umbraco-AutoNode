@@ -117,8 +117,9 @@ namespace DotSee
                     string NodeName = xmlConfigEntry.Attributes["nodeName"].Value;
                     bool BringNewNodeFirst = bool.Parse(xmlConfigEntry.Attributes["bringNewNodeFirst"].Value);
                     bool OnlyCreateIfNoChildren = bool.Parse(xmlConfigEntry.Attributes["onlyCreateIfNoChildren"].Value);
+                    bool CreateIfExistsWithDifferentName = bool.Parse(xmlConfigEntry.Attributes["createIfExistsWithDifferentName"].Value);
 
-                    var rule = new AutoNodeRule(CreatedDocTypeAlias, DocTypeAliasToCreate, NodeName, BringNewNodeFirst, OnlyCreateIfNoChildren);
+                    var rule = new AutoNodeRule(CreatedDocTypeAlias, DocTypeAliasToCreate, NodeName, BringNewNodeFirst, OnlyCreateIfNoChildren, CreateIfExistsWithDifferentName);
                     _rules.Add(rule);
 
                 }
@@ -146,8 +147,10 @@ namespace DotSee
 
             var existingNode = node.Children()
             .Where(x =>
-                x.ContentType.Alias.ToLower().Equals(rule.DocTypeAliasToCreate.ToLower()) &&
-                x.Name.ToLower().Equals(rule.NodeName.ToLower())).FirstOrDefault();
+                x.ContentType.Alias.ToLower().Equals(rule.DocTypeAliasToCreate.ToLower()) 
+                &&
+                (rule.CreateIfExistsWithDifferentName) ? true : x.Name.ToLower().Equals(rule.NodeName.ToLower())
+                ).FirstOrDefault();
 
             ///Get a content service reference
             IContentService cs = ApplicationContext.Current.Services.ContentService;
