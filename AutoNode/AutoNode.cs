@@ -65,6 +65,14 @@ namespace DotSee
         }
 
         /// <summary>
+        /// Removes all rules from the AutoNode instance
+        /// </summary>
+        public void ClearRules()
+        {
+            _rules.RemoveAll<AutoNodeRule>(x=>true);
+        }
+
+        /// <summary>
         /// Applies all rules on creation of a node. 
         /// </summary>
         /// <param name="node">The newly created node we need to apply rules for</param>
