@@ -12,8 +12,8 @@ Here's an example rule:
     docTypeAliasToCreate="Dummy" 
     nodeName="Dummy Name" 
     bringNewNodeFirst="true" 
-    onlyCreateIfNoChildren="false"
-    createIfExistsWithDifferentName="false"
+    onlyCreateIfNoChildren="false" 
+    createIfExistsWithDifferentName="false" 
     dictionaryItemForName =""
   >
   </rule>
