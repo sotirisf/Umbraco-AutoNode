@@ -15,15 +15,24 @@ namespace DotSee
 
             AutoNode au = AutoNode.Instance;
 
+            ContentService.Saved += ContentService_Saved;
             ContentService.Published += ContentServicePublished;
 
+        }
+
+        private void ContentService_Saved(IContentService sender, SaveEventArgs<IContent> e)
+        {
+            foreach (var node in e.SavedEntities)
+            {
+                AutoNode.Instance.Run(node);
+            }
         }
 
         private void ContentServicePublished(IPublishingStrategy sender, PublishEventArgs<IContent> e)
         {            
             foreach (var node in e.PublishedEntities)
             {
-                AutoNode.Instance.Run(node);
+                AutoNode.Instance.RunPublish(node);
             }            
         }
 
