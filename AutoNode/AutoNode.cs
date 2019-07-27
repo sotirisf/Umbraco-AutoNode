@@ -4,33 +4,35 @@ using System.IO;
 using System.Linq;
 using System.Web.Hosting;
 using System.Xml;
-using umbraco;
 using Umbraco.Core;
+using Umbraco.Core.Composing;
+using Umbraco.Core.Configuration;
 using Umbraco.Core.Logging;
 using Umbraco.Core.Models;
+using Umbraco.Core.Persistence.Querying;
 using Umbraco.Core.Services;
-using Umbraco.Web;
+using DotSee.AutoNode.Properties;
 
-namespace DotSee
+namespace DotSee.AutoNode
 {
     /// <summary>
     /// Creates new nodes under a newly created node, according to a set of rules
     /// </summary>
-    public sealed class AutoNode 
+    public sealed class AutoNode
     {
-
         #region Private Members
+
         /// <summary>
         /// Lazy singleton instance member
         /// </summary>
-        private static readonly Lazy<AutoNode> _instance = new Lazy<AutoNode>(()=>new AutoNode());
+        private static readonly Lazy<AutoNode> _instance = new Lazy<AutoNode>(() => new AutoNode());
 
         /// <summary>
         /// The list of rule objects
         /// </summary>
         private List<AutoNodeRule> _rules;
 
-        #endregion
+        #endregion Private Members
 
         #region Constructors
 
@@ -38,7 +40,6 @@ namespace DotSee
         /// Returns a (singleton) AutoNode instance
         /// </summary>
         public static AutoNode Instance { get { return _instance.Value; } }
-
 
         /// <summary>
         /// Private constructor for Singleton
@@ -51,12 +52,12 @@ namespace DotSee
             GetRulesFromConfigFile();
         }
 
-        #endregion
+        #endregion Constructors
 
         #region Public Methods
 
         /// <summary>
-        /// Registers a new rule object 
+        /// Registers a new rule object
         /// </summary>
         /// <param name="rule">The rule object</param>
         public void RegisterRule(AutoNodeRule rule)
@@ -69,30 +70,29 @@ namespace DotSee
         /// </summary>
         public void ClearRules()
         {
-            _rules.RemoveAll<AutoNodeRule>(x=>true);
+            _rules.RemoveAll<AutoNodeRule>(x => true);
         }
 
         /// <summary>
-        /// Applies all rules on creation of a node. 
+        /// Applies all rules on creation of a node.
         /// </summary>
         /// <param name="node">The newly created node we need to apply rules for</param>
-        public void Run(IContent node)
+        public void Run(IContent node, ILogger logger, IContentService cs, IContentTypeService cts)
         {
             string createdDocTypeAlias = node.ContentType.Alias;
 
-            bool hasChildren = node.Children().Any();
-            
+            bool hasChildren = cs.HasChildren(node.Id);
+
             foreach (AutoNodeRule rule in _rules)
             {
                 if (rule.CreatedDocTypeAlias.Equals(createdDocTypeAlias))
                 {
-                    CreateNewNode(node, rule, hasChildren);                    
+                    CreateNewNode(node, rule, hasChildren, logger, cs, cts);
                 }
-
-            }            
+            }
         }
 
-        #endregion
+        #endregion Public Methods
 
         #region Private Methods
 
@@ -105,19 +105,22 @@ namespace DotSee
 
             try
             {
-                xmlConfig.Load(HostingEnvironment.MapPath(GlobalSettings.Path + "/../config/autoNode.config"));
+                IGlobalSettings gs = new GlobalSettings();
+                xmlConfig.Load(HostingEnvironment.MapPath(gs.Path + "/../config/autoNode.config"));
             }
-            catch (FileNotFoundException ex) {
-                LogHelper.Error(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Configuration file was not found.", ex);
+            catch (FileNotFoundException ex)
+            {
+                Current.Logger.Error<AutoNode>(ex, Resources.ErrorConfigNotFound);
+
                 return;
             }
             catch (Exception ex)
             {
-                LogHelper.Error(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: There was a problem loading AutoNode configuration from the config file", ex);
+                Current.Logger.Error<AutoNode>(ex, Resources.ErrorLoadConfig);
                 return;
             }
-            LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Loading configuration...");
-            
+            Current.Logger.Info<AutoNode>(Resources.InfoLoadingConfig);
+
             foreach (XmlNode xmlConfigEntry in xmlConfig.SelectNodes("/autoNode/rule"))
             {
                 if (xmlConfigEntry.NodeType == XmlNodeType.Element)
@@ -126,15 +129,15 @@ namespace DotSee
                     string DocTypeAliasToCreate = xmlConfigEntry.Attributes["docTypeAliasToCreate"].Value;
                     string NodeName = xmlConfigEntry.Attributes["nodeName"].Value;
 
-                    bool BringNewNodeFirst = (xmlConfigEntry.Attributes["bringNewNodeFirst"]!=null) 
+                    bool BringNewNodeFirst = (xmlConfigEntry.Attributes["bringNewNodeFirst"] != null)
                         ? bool.Parse(xmlConfigEntry.Attributes["bringNewNodeFirst"].Value)
                         : false;
 
-                    bool OnlyCreateIfNoChildren = (xmlConfigEntry.Attributes["onlyCreateIfNoChildren"]!=null) 
-                        ? bool.Parse(xmlConfigEntry.Attributes["onlyCreateIfNoChildren"].Value) 
+                    bool OnlyCreateIfNoChildren = (xmlConfigEntry.Attributes["onlyCreateIfNoChildren"] != null)
+                        ? bool.Parse(xmlConfigEntry.Attributes["onlyCreateIfNoChildren"].Value)
                         : false;
 
-                    bool CreateIfExistsWithDifferentName = (xmlConfigEntry.Attributes["createIfExistsWithDifferentName"]!=null) 
+                    bool CreateIfExistsWithDifferentName = (xmlConfigEntry.Attributes["createIfExistsWithDifferentName"] != null)
                         ? bool.Parse(xmlConfigEntry.Attributes["createIfExistsWithDifferentName"].Value)
                         : true;
 
@@ -144,12 +147,11 @@ namespace DotSee
 
                     var rule = new AutoNodeRule(CreatedDocTypeAlias, DocTypeAliasToCreate, NodeName, BringNewNodeFirst, OnlyCreateIfNoChildren, CreateIfExistsWithDifferentName, DictionaryItemForName);
                     _rules.Add(rule);
-
+                    
                 }
             }
-            LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Loading configuration complete");
+            Current.Logger.Info<AutoNode>(Resources.InfoLoadConfigComplete);
         }
-
 
         /// <summary>
         /// Creates a new node under a given node, according to settings of the rule in effect
@@ -157,34 +159,59 @@ namespace DotSee
         /// <param name="node">The node to create a new node under</param>
         /// <param name="rule">The rule that will apply settings for the new node's creation</param>
         /// <param name="hasChildren">Indicates if the node has children</param>
-        private void CreateNewNode(IContent node, AutoNodeRule rule, bool hasChildren)
+        private void CreateNewNode(IContent node, AutoNodeRule rule, bool hasChildren, ILogger logger, IContentService cs, IContentTypeService cts)
         {
-            //Get the node name that is supposed to be given to the new node.
-            string assignedNodeName = GetAssignedNodeName(node, rule);
+           
 
-            LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, string.Format("AutoNode: Trying to automatically create node of type {2} for node {0} of type {1}...", node.Id.ToString(), node.ContentType.Alias.ToString(), rule.DocTypeAliasToCreate));
+            logger.Info<AutoNode>(Resources.InfoTryCreateNode, rule.DocTypeAliasToCreate, node.Id.ToString(), node.ContentType.Alias.ToString());
 
             //If rule says only if no children and there are children, abort process
             if (rule.OnlyCreateIfNoChildren && hasChildren)
             {
-                LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Aborting node creation due to rule restrictions. Parent node already has children, rule indicates that parent node should not have children");
+                logger.Info<AutoNode>(Resources.InfoAbortCreateNodeRuleRestrictions);
+
                 return;
             }
+
+            if (node.AvailableCultures.Count() == 0)
+            {
+                CreateNewNodeCultureAware(node, rule, "", logger, cs, cts);
+            }
+            else
+            {
+                foreach (string culture in node.AvailableCultures)
+                {
+                    CreateNewNodeCultureAware(node, rule, culture, logger, cs, cts);
+                }
+            }
+          
+        }
+
+        private void CreateNewNodeCultureAware(IContent node, AutoNodeRule rule, string culture, ILogger logger, IContentService cs, IContentTypeService cts)
+        {
+            //TODO: trycatch and exit if not found
+            int typeIdToCreate = cts.Get(rule.DocTypeAliasToCreate).Id;
+
+            //Get the node name that is supposed to be given to the new node.
+            string assignedNodeName = GetAssignedNodeName(node, rule, culture);
+
+            long totalRecords;
+            var query = new Query<IContent>(Current.SqlContext);
 
             //Find if an existing node is already there.
             //If we find an existing node a new one will NOT be created.
             //An existing node can be, depending on configuration, a node of the same type OR a node of the same type with the same name.
-            var existingNode = node.Children()
-            .Where(x =>
-                x.ContentType.Alias.ToLower().Equals(rule.DocTypeAliasToCreate.ToLower()))  //Same doctype
-             .Where(y=>
-                (rule.CreateIfExistsWithDifferentName)
-                 ? y.Name.ToLower().Equals(assignedNodeName.ToLower()) //Same name. If found and createIfExistsWithDifferentName is true then a node will NOT be created.
-                 : true                                             //Broader, it is enough to find a node with the same doctype.
-                ).FirstOrDefault();
-
-            ///Get a content service reference
-            IContentService cs = ApplicationContext.Current.Services.ContentService;
+            IContent existingNode = null;
+            if (cs.HasChildren(node.Id))
+            {
+                IEnumerable<IContent> children = cs.GetPagedChildren(node.Id, 0, 1, out totalRecords
+                    , filter: query.Where(
+                        x => x.ContentTypeId == typeIdToCreate
+                        && (x.Name.Equals(assignedNodeName, StringComparison.CurrentCultureIgnoreCase) || !rule.CreateIfExistsWithDifferentName)
+                       )
+                      );
+                existingNode = children.FirstOrDefault();
+            }
 
             //If it exists already
             if (existingNode != null)
@@ -192,17 +219,21 @@ namespace DotSee
                 //If it is already published or if the parent is NOT published, abort process.
                 if (existingNode.Published || !node.Published)
                 {
-                    LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Aborting node creation since node already exists");
+                    logger.Info<AutoNode>(Resources.InfoAbortCreateNodeNodeExists);
                     return;
                 }
 
                 //If it exists already but is not published and parent is published, republish
                 if (!existingNode.Published && node.Published)
                 {
-                    LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Republishing already existing child node...");
+                    logger.Info<AutoNode>(Resources.InfoRepublishingExistingNode);
 
                     //Republish the node
-                    cs.SaveAndPublishWithStatus(existingNode, raiseEvents: true);
+                    var result = cs.SaveAndPublish(existingNode, raiseEvents: true);
+                    if (!result.Success)
+                    {
+                        logger.Error<AutoNode>(String.Format(Resources.ErrorRepublishNoSuccess, existingNode.Name, node.Name));
+                    }
                     return;
                 }
             }
@@ -212,25 +243,39 @@ namespace DotSee
             {
                 ///Create and publish the new node
                 //IContent content = cs.CreateContent(rule.NodeName, node.Id, rule.DocTypeAliasToCreate);
-                IContent content = cs.CreateContent(assignedNodeName, node.Id, rule.DocTypeAliasToCreate);
+                IContent content = cs.Create(assignedNodeName, node.GetUdi().Guid, rule.DocTypeAliasToCreate);
+
+                if (!string.IsNullOrEmpty(culture))
+                {
+                    ContentCultureInfos cinfo = new ContentCultureInfos(culture);
+                    cinfo.Name = assignedNodeName;
+                    content.CultureInfos.Add(cinfo);
+                }
 
                 //Publish the new node
-                cs.SaveAndPublishWithStatus(content, raiseEvents: false);                   
-                
-                ///Bring the new node first if rule dictates so
+                var result = (string.IsNullOrEmpty(culture)) 
+                    ? cs.SaveAndPublish(content, raiseEvents: false, culture: null)
+                    : cs.SaveAndPublish(content, raiseEvents: false, culture: culture);
+
+                if (!result.Success)
+                {
+                    logger.Error<AutoNode>(String.Format(Resources.ErrorCreateNode, assignedNodeName, node.Name));
+                    return;
+                }
+                // Bring the new node first if rule dictates so
                 if (rule.BringNewNodeFirst)
                 {
-                    LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Bringing newly created node first...");
+                    logger.Info<AutoNode>(Resources.InfoSortingNodes);
                     cs.Sort(BringLastNodeFirst(node));
                 }
 
-                LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: Node created succesfully.");
+                logger.Info<AutoNode>(String.Format(Resources.InfoCreateNodeSuccess, assignedNodeName, node.Name));
             }
             catch (Exception ex)
             {
-                LogHelper.Error(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: There was a problem with new node creation. Please check that the doctype alias you have defined in rules actually exists", ex);
+                logger.Error<AutoNode>(ex, Resources.ErrorGeneric);
+                return;
             }
-           
         }
 
         /// <summary>
@@ -240,14 +285,14 @@ namespace DotSee
         /// <returns></returns>
         private IEnumerable<IContent> BringLastNodeFirst(IContent node)
         {
-            int cnt = node.Children().Count();
+            IContentService cs = Current.Services.ContentService;
+            int cnt = cs.CountChildren(node.Id);
             if (cnt == 0) { yield break; }
+            long totalRecords;
+            yield return cs.GetPagedChildren(node.Id, 0, cnt, out totalRecords).Last();
 
-            yield return node.Children().Last();
-
-            foreach (IContent child in node.Children().Take(cnt - 1))
+            foreach (IContent child in cs.GetPagedChildren(node.Id, 0, cnt-1, out totalRecords))
             {
-
                 yield return child;
             }
         }
@@ -258,7 +303,7 @@ namespace DotSee
         /// <param name="node">The node under which the new node will be created</param>
         /// <param name="rule">The rule being processed</param>
         /// <returns></returns>
-        private string GetAssignedNodeName(IContent node, AutoNodeRule rule)
+        private string GetAssignedNodeName(IContent node, AutoNodeRule rule, string culture)
         {
             string assignedNodeName = null;
 
@@ -267,22 +312,22 @@ namespace DotSee
             {
                 try
                 {
-                    var lsvc = ApplicationContext.Current.Services.LocalizationService;
-                    var lang = new UmbracoHelper(UmbracoContext.Current).TypedContent(node.Id).GetCulture().Name;
-                    assignedNodeName = lsvc.GetDictionaryItemByKey(rule.DictionaryItemForName).Translations.First(t => t.Language.CultureInfo.Name == lang).Value;
+                    var lsvc = Current.Services.LocalizationService;
+                    
+                    assignedNodeName = lsvc.GetDictionaryItemByKey(rule.DictionaryItemForName).Translations.First(t => t.Language.CultureInfo.Name == culture).Value;
                 }
                 catch (Exception ex)
                 {
-                    LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType, "AutoNode: The dictionary key specified in autoNode.config was not found.");
+                    Current.Logger.Error<AutoNode>(ex, Resources.ErrorDictionaryKeyNotFound);
                 }
             }
-            
+
             //If no dictionary key has been found, fallback to the standard name setting
             if (string.IsNullOrEmpty(assignedNodeName)) { assignedNodeName = rule.NodeName; }
 
             return (assignedNodeName);
         }
 
-        #endregion
+        #endregion Private Methods
     }
 }

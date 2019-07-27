@@ -1,4 +1,4 @@
-﻿namespace DotSee
+﻿namespace DotSee.AutoNode
 {
     /// <summary>
     /// Holds rules for automatically creating nodes.
