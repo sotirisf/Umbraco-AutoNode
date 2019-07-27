@@ -12,6 +12,7 @@
         public bool OnlyCreateIfNoChildren { get; set; }
         public bool CreateIfExistsWithDifferentName { get; set; }
         public string DictionaryItemForName { get; set; }
+        public bool KeepNewNodeUnpublished { get; set; }
 
         /// <summary>
         /// Creates a new rule for automatically creating nodes.
@@ -29,7 +30,8 @@
             bool bringNodeFirst = false, 
             bool onlyCreateIfNoChildren = false, 
             bool createIfExistsWithDifferentName = true,
-            string dictionaryItemForName ="AutoNode.Name"
+            string dictionaryItemForName ="AutoNode.Name",
+            bool keepNewNodeUnpublished = false
             )
         {
             CreatedDocTypeAlias = createdDocTypealias;
@@ -39,6 +41,7 @@
             OnlyCreateIfNoChildren = onlyCreateIfNoChildren;
             CreateIfExistsWithDifferentName = createIfExistsWithDifferentName;
             DictionaryItemForName = dictionaryItemForName;
+            KeepNewNodeUnpublished = keepNewNodeUnpublished;
         }
     }
 }

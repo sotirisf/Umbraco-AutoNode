@@ -145,7 +145,11 @@ namespace DotSee.AutoNode
                       ? xmlConfigEntry.Attributes["dictionaryItemForName"].Value
                       : "";
 
-                    var rule = new AutoNodeRule(CreatedDocTypeAlias, DocTypeAliasToCreate, NodeName, BringNewNodeFirst, OnlyCreateIfNoChildren, CreateIfExistsWithDifferentName, DictionaryItemForName);
+                    bool KeepNewNodeUnpublished = (xmlConfigEntry.Attributes["keepNewNodeUnpublished"] != null)
+                      ? bool.Parse(xmlConfigEntry.Attributes["keepNewNodeUnpublished"].Value)
+                      : false;
+
+                    var rule = new AutoNodeRule(CreatedDocTypeAlias, DocTypeAliasToCreate, NodeName, BringNewNodeFirst, OnlyCreateIfNoChildren, CreateIfExistsWithDifferentName, DictionaryItemForName, KeepNewNodeUnpublished);
                     _rules.Add(rule);
                     
                 }
@@ -252,12 +256,24 @@ namespace DotSee.AutoNode
                     content.CultureInfos.Add(cinfo);
                 }
 
-                //Publish the new node
-                var result = (string.IsNullOrEmpty(culture)) 
-                    ? cs.SaveAndPublish(content, raiseEvents: false, culture: null)
-                    : cs.SaveAndPublish(content, raiseEvents: false, culture: culture);
+                bool success = false;
 
-                if (!result.Success)
+                if (!rule.KeepNewNodeUnpublished)
+                {
+                    //Publish the new node
+                    var result = (string.IsNullOrEmpty(culture))
+                        ? cs.SaveAndPublish(content, raiseEvents: false, culture: null)
+                        : cs.SaveAndPublish(content, raiseEvents: false, culture: culture);
+
+                    success = result.Success;
+                }
+                else
+                {
+                    var result = cs.Save(content, raiseEvents: false);
+                    success = result.Success;
+                }
+
+                if (!success)
                 {
                     logger.Error<AutoNode>(String.Format(Resources.ErrorCreateNode, assignedNodeName, node.Name));
                     return;
