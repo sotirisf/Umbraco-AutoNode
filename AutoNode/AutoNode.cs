@@ -32,6 +32,8 @@ namespace DotSee.AutoNode
         /// </summary>
         private List<AutoNodeRule> _rules;
 
+        private bool _rulesLoaded;
+
         #endregion Private Members
 
         #region Constructors
@@ -47,9 +49,8 @@ namespace DotSee.AutoNode
         private AutoNode()
         {
             _rules = new List<AutoNodeRule>();
+            _rulesLoaded = false;
 
-            ///Get rules from the config file. Any rules programmatically declared later on will be added too.
-            GetRulesFromConfigFile();
         }
 
         #endregion Constructors
@@ -71,6 +72,7 @@ namespace DotSee.AutoNode
         public void ClearRules()
         {
             _rules.RemoveAll<AutoNodeRule>(x => true);
+            _rulesLoaded = false;
         }
 
         /// <summary>
@@ -79,6 +81,16 @@ namespace DotSee.AutoNode
         /// <param name="node">The newly created node we need to apply rules for</param>
         public void Run(IContent node, ILogger logger, IContentService cs, IContentTypeService cts)
         {
+
+            if (!_rulesLoaded)
+            {
+                foreach (AutoNodeRule r in (new ConfigFileRuleProvider().GetRules(logger)))
+                {
+                    _rules.Add(r);
+                }
+                _rulesLoaded = true;
+            }
+
             string createdDocTypeAlias = node.ContentType.Alias;
 
             bool hasChildren = cs.HasChildren(node.Id);
@@ -96,67 +108,7 @@ namespace DotSee.AutoNode
 
         #region Private Methods
 
-        /// <summary>
-        /// Gets rules from /config/autoNode.config file (if it exists)
-        /// </summary>
-        private void GetRulesFromConfigFile()
-        {
-            XmlDocument xmlConfig = new XmlDocument();
-
-            try
-            {
-                IGlobalSettings gs = new GlobalSettings();
-                xmlConfig.Load(HostingEnvironment.MapPath(gs.Path + "/../config/autoNode.config"));
-            }
-            catch (FileNotFoundException ex)
-            {
-                Current.Logger.Error<AutoNode>(ex, Resources.ErrorConfigNotFound);
-
-                return;
-            }
-            catch (Exception ex)
-            {
-                Current.Logger.Error<AutoNode>(ex, Resources.ErrorLoadConfig);
-                return;
-            }
-            Current.Logger.Info<AutoNode>(Resources.InfoLoadingConfig);
-
-            foreach (XmlNode xmlConfigEntry in xmlConfig.SelectNodes("/autoNode/rule"))
-            {
-                if (xmlConfigEntry.NodeType == XmlNodeType.Element)
-                {
-                    string CreatedDocTypeAlias = xmlConfigEntry.Attributes["createdDocTypeAlias"].Value;
-                    string DocTypeAliasToCreate = xmlConfigEntry.Attributes["docTypeAliasToCreate"].Value;
-                    string NodeName = xmlConfigEntry.Attributes["nodeName"].Value;
-
-                    bool BringNewNodeFirst = (xmlConfigEntry.Attributes["bringNewNodeFirst"] != null)
-                        ? bool.Parse(xmlConfigEntry.Attributes["bringNewNodeFirst"].Value)
-                        : false;
-
-                    bool OnlyCreateIfNoChildren = (xmlConfigEntry.Attributes["onlyCreateIfNoChildren"] != null)
-                        ? bool.Parse(xmlConfigEntry.Attributes["onlyCreateIfNoChildren"].Value)
-                        : false;
-
-                    bool CreateIfExistsWithDifferentName = (xmlConfigEntry.Attributes["createIfExistsWithDifferentName"] != null)
-                        ? bool.Parse(xmlConfigEntry.Attributes["createIfExistsWithDifferentName"].Value)
-                        : true;
-
-                    string DictionaryItemForName = (xmlConfigEntry.Attributes["dictionaryItemForName"] != null)
-                      ? xmlConfigEntry.Attributes["dictionaryItemForName"].Value
-                      : "";
-
-                    bool KeepNewNodeUnpublished = (xmlConfigEntry.Attributes["keepNewNodeUnpublished"] != null)
-                      ? bool.Parse(xmlConfigEntry.Attributes["keepNewNodeUnpublished"].Value)
-                      : false;
-
-                    var rule = new AutoNodeRule(CreatedDocTypeAlias, DocTypeAliasToCreate, NodeName, BringNewNodeFirst, OnlyCreateIfNoChildren, CreateIfExistsWithDifferentName, DictionaryItemForName, KeepNewNodeUnpublished);
-                    _rules.Add(rule);
-                    
-                }
-            }
-            Current.Logger.Info<AutoNode>(Resources.InfoLoadConfigComplete);
-        }
-
+  
         /// <summary>
         /// Creates a new node under a given node, according to settings of the rule in effect
         /// </summary>
