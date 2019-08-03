@@ -79,12 +79,12 @@ namespace DotSee.AutoNode
         /// Applies all rules on creation of a node.
         /// </summary>
         /// <param name="node">The newly created node we need to apply rules for</param>
-        public void Run(IContent node, ILogger logger, IContentService cs, IContentTypeService cts)
+        public void Run(IContent node, ILogger logger, IContentService cs, IContentTypeService cts, IRuleProvider rp)
         {
 
             if (!_rulesLoaded)
             {
-                foreach (AutoNodeRule r in (new ConfigFileRuleProvider().GetRules(logger)))
+                foreach (AutoNodeRule r in (rp.GetRules(logger)))
                 {
                     _rules.Add(r);
                 }
@@ -97,7 +97,7 @@ namespace DotSee.AutoNode
 
             foreach (AutoNodeRule rule in _rules)
             {
-                if (rule.CreatedDocTypeAlias.Equals(createdDocTypeAlias))
+                if (rule.CreatedDocTypeAlias.InvariantEquals(createdDocTypeAlias))
                 {
                     CreateNewNode(node, rule, hasChildren, logger, cs, cts);
                 }
@@ -281,8 +281,14 @@ namespace DotSee.AutoNode
                 try
                 {
                     var lsvc = Current.Services.LocalizationService;
-                    
-                    assignedNodeName = lsvc.GetDictionaryItemByKey(rule.DictionaryItemForName).Translations.First(t => t.Language.CultureInfo.Name == culture).Value;
+                    if (!string.IsNullOrEmpty(culture))
+                    {
+                        assignedNodeName = lsvc.GetDictionaryItemByKey(rule.DictionaryItemForName).Translations.First(t => t.Language.CultureInfo.Name == culture).Value;
+                    }
+                    else
+                    {
+                        assignedNodeName = lsvc.GetDictionaryItemByKey(rule.DictionaryItemForName).Translations.First().Value;
+                    }
                 }
                 catch (Exception ex)
                 {
