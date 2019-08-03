@@ -19,15 +19,13 @@ namespace DotSee.AutoNode
         #region Private Members
 
         /// <summary>
-        /// Lazy singleton instance member
-        /// </summary>
-        //private static readonly Lazy<AutoNode> _instance = new Lazy<AutoNode>(() => new AutoNode());
-
-        /// <summary>
         /// The list of rule objects
         /// </summary>
         private List<AutoNodeRule> _rules;
 
+        /// <summary>
+        /// Flag to indicates where rules have been loaded by the rules provider
+        /// </summary>
         private bool _rulesLoaded;
 
         private readonly ILogger _logger;
@@ -38,11 +36,6 @@ namespace DotSee.AutoNode
         #endregion Private Members
 
         #region Constructors
-
-        /// <summary>
-        /// Returns a (singleton) AutoNode instance
-        /// </summary>
-        //public static AutoNode Instance { get { return _instance.Value; } }
 
         /// <summary>
         /// Private constructor for Singleton
@@ -281,7 +274,7 @@ namespace DotSee.AutoNode
                     var lsvc = Current.Services.LocalizationService;
                     if (!string.IsNullOrEmpty(culture))
                     {
-                        assignedNodeName = lsvc.GetDictionaryItemByKey(rule.DictionaryItemForName).Translations.First(t => t.Language.CultureInfo.Name == culture).Value;
+                        assignedNodeName = lsvc.GetDictionaryItemByKey(rule.DictionaryItemForName).Translations.First(t => t.Language.CultureInfo.Name.InvariantEquals(culture)).Value;
                     }
                     else
                     {
