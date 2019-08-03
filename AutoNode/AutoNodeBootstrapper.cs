@@ -23,6 +23,7 @@ namespace DotSee.AutoNode
         private readonly IContentService _cs;
         private readonly IContentTypeService _cts;
         private readonly IRuleProvider _rp;
+        private readonly AutoNode _autoNode;
 
         public SubscribeToContentServicePublishedComponent(ILogger logger, IContentService cs, IContentTypeService cts)
         {
@@ -30,6 +31,8 @@ namespace DotSee.AutoNode
             _cs = cs;
             _cts = cts;
             _rp = new ConfigFileRuleProvider();
+            _autoNode = new AutoNode(_logger, _cs, _cts, _rp);
+
         }
         public void Initialize()
         {
@@ -41,7 +44,7 @@ namespace DotSee.AutoNode
             
             foreach (var node in e.PublishedEntities)
             {
-                AutoNode.Instance.Run(node, _logger, _cs, _cts, _rp);
+                _autoNode.Run(node);
             }
         }
 
