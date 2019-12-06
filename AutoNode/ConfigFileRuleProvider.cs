@@ -38,31 +38,31 @@ namespace DotSee.AutoNode
             {
                 if (xmlConfigEntry.NodeType == XmlNodeType.Element)
                 {
-                    string CreatedDocTypeAlias = xmlConfigEntry.Attributes["createdDocTypeAlias"].Value;
-                    string DocTypeAliasToCreate = xmlConfigEntry.Attributes["docTypeAliasToCreate"].Value;
-                    string NodeName = xmlConfigEntry.Attributes["nodeName"].Value;
+                    string createdDocTypeAlias = xmlConfigEntry.Attributes["createdDocTypeAlias"].Value;
+                    string docTypeAliasToCreate = xmlConfigEntry.Attributes["docTypeAliasToCreate"].Value;
+                    string nodeName = xmlConfigEntry.Attributes["nodeName"].Value;
 
-                    bool BringNewNodeFirst = (xmlConfigEntry.Attributes["bringNewNodeFirst"] != null)
+                    bool bringNewNodeFirst = (xmlConfigEntry.Attributes["bringNewNodeFirst"] != null)
                         ? bool.Parse(xmlConfigEntry.Attributes["bringNewNodeFirst"].Value)
                         : false;
 
-                    bool OnlyCreateIfNoChildren = (xmlConfigEntry.Attributes["onlyCreateIfNoChildren"] != null)
+                    bool onlyCreateIfNoChildren = (xmlConfigEntry.Attributes["onlyCreateIfNoChildren"] != null)
                         ? bool.Parse(xmlConfigEntry.Attributes["onlyCreateIfNoChildren"].Value)
                         : false;
 
-                    bool CreateIfExistsWithDifferentName = (xmlConfigEntry.Attributes["createIfExistsWithDifferentName"] != null)
+                    bool createIfExistsWithDifferentName = (xmlConfigEntry.Attributes["createIfExistsWithDifferentName"] != null)
                         ? bool.Parse(xmlConfigEntry.Attributes["createIfExistsWithDifferentName"].Value)
                         : true;
 
-                    string DictionaryItemForName = (xmlConfigEntry.Attributes["dictionaryItemForName"] != null)
+                    string dictionaryItemForName = (xmlConfigEntry.Attributes["dictionaryItemForName"] != null)
                       ? xmlConfigEntry.Attributes["dictionaryItemForName"].Value
                       : "";
 
-                    bool KeepNewNodeUnpublished = (xmlConfigEntry.Attributes["keepNewNodeUnpublished"] != null)
+                    bool keepNewNodeUnpublished = (xmlConfigEntry.Attributes["keepNewNodeUnpublished"] != null)
                       ? bool.Parse(xmlConfigEntry.Attributes["keepNewNodeUnpublished"].Value)
                       : false;
 
-                    var rule = new AutoNodeRule(CreatedDocTypeAlias, DocTypeAliasToCreate, NodeName, BringNewNodeFirst, OnlyCreateIfNoChildren, CreateIfExistsWithDifferentName, DictionaryItemForName, KeepNewNodeUnpublished);
+                    var rule = new AutoNodeRule(createdDocTypeAlias, docTypeAliasToCreate, nodeName, bringNewNodeFirst, onlyCreateIfNoChildren, createIfExistsWithDifferentName, dictionaryItemForName, keepNewNodeUnpublished);
                     retVal.Add(rule);
                 }
             }

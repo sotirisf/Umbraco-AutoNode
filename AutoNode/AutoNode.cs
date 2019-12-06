@@ -37,10 +37,8 @@ namespace DotSee.AutoNode
 
         #region Constructors
 
-        /// <summary>
-        /// Private constructor for Singleton
-        /// </summary>
-        public AutoNode(ILogger logger, IContentService cs, IContentTypeService cts, IRuleProvider rp)
+        
+        public AutoNode(ILogger logger, IContentService cs, IContentTypeService cts, IRuleProvider rp=null)
         {
             _rules = new List<AutoNodeRule>();
             _rulesLoaded = false;
@@ -78,7 +76,12 @@ namespace DotSee.AutoNode
         /// <param name="node">The newly created node we need to apply rules for</param>
         public void Run(IContent node)
         {
-            if (!_rulesLoaded)
+            if (_rules != null && _rules.Count() > 0)
+            {
+                _rulesLoaded = true;
+            }
+
+            if (!_rulesLoaded && _rp!=null)
             {
                 foreach (AutoNodeRule r in (_rp.GetRules(_logger)))
                 {
@@ -87,7 +90,12 @@ namespace DotSee.AutoNode
                 _rulesLoaded = true;
             }
 
-            string createdDocTypeAlias = node.ContentType.Alias;
+            if (_rules == null || _rules.Count() == 0)
+            {
+                return;
+            }
+
+                string createdDocTypeAlias = node.ContentType.Alias;
 
             bool hasChildren = _cs.HasChildren(node.Id);
 
@@ -135,55 +143,53 @@ namespace DotSee.AutoNode
             }
         }
 
+
+        private void PublishExistingChildNode(IContent node, IContent existingNode, string culture="", string assignedNodeName="")
+        {
+            if (existingNode==null) { return; }
+
+            //If the parent is NOT published, abort process.
+            if (!node.Published)
+            {
+                _logger.Info<AutoNode>(Resources.InfoAbortCreateNodeNodeExists);
+                return;
+            }
+
+            //If it exists already but is not published and parent is published, republish
+            //if (!existingNode.Published && node.Published)
+            //{
+                _logger.Info<AutoNode>(Resources.InfoRepublishingExistingNode);
+            if (!string.IsNullOrEmpty(culture) && !existingNode.AvailableCultures.Any(x => x.InvariantEquals(culture)))
+            {
+                ContentCultureInfos cinfo = new ContentCultureInfos(culture);
+                cinfo.Name = string.IsNullOrEmpty(assignedNodeName) ? node.CultureInfos.Values.Where(x => !string.IsNullOrEmpty(x.Name)).FirstOrDefault().Name : assignedNodeName;
+                existingNode.CultureInfos.Add(cinfo);
+            }
+
+                //Republish the node
+                var result = _cs.SaveAndPublish(existingNode, raiseEvents: true);
+                if (!result.Success)
+                {
+                    _logger.Error<AutoNode>(String.Format(Resources.ErrorRepublishNoSuccess, existingNode.Name, node.Name));
+                }
+                return;
+            //}
+        }
+
+
         private void CreateNewNodeCultureAware(IContent node, AutoNodeRule rule, string culture)
         {
-            //TODO: trycatch and exit if not found
-            int typeIdToCreate = _cts.Get(rule.DocTypeAliasToCreate).Id;
-
             //Get the node name that is supposed to be given to the new node.
             string assignedNodeName = GetAssignedNodeName(node, rule, culture);
 
-            long totalRecords;
-            var query = new Query<IContent>(Current.SqlContext);
-
-            //Find if an existing node is already there.
-            //If we find an existing node a new one will NOT be created.
-            //An existing node can be, depending on configuration, a node of the same type OR a node of the same type with the same name.
-            IContent existingNode = null;
-            if (_cs.HasChildren(node.Id))
-            {
-                IEnumerable<IContent> children = _cs.GetPagedChildren(node.Id, 0, 1, out totalRecords
-                    , filter: query.Where(
-                        x => x.ContentTypeId == typeIdToCreate
-                        && (x.Name.Equals(assignedNodeName, StringComparison.CurrentCultureIgnoreCase) || !rule.CreateIfExistsWithDifferentName)
-                       )
-                      );
-                existingNode = children.FirstOrDefault();
-            }
+            //Get the first existing node of the type and name defined by the rule
+            IContent existingNode = GetExistingChildNode(node, rule, assignedNodeName);
 
             //If it exists already
             if (existingNode != null)
             {
-                //If it is already published or if the parent is NOT published, abort process.
-                if (existingNode.Published || !node.Published)
-                {
-                    _logger.Info<AutoNode>(Resources.InfoAbortCreateNodeNodeExists);
-                    return;
-                }
-
-                //If it exists already but is not published and parent is published, republish
-                if (!existingNode.Published && node.Published)
-                {
-                    _logger.Info<AutoNode>(Resources.InfoRepublishingExistingNode);
-
-                    //Republish the node
-                    var result = _cs.SaveAndPublish(existingNode, raiseEvents: true);
-                    if (!result.Success)
-                    {
-                        _logger.Error<AutoNode>(String.Format(Resources.ErrorRepublishNoSuccess, existingNode.Name, node.Name));
-                    }
-                    return;
-                }
+                PublishExistingChildNode(node, existingNode, culture, assignedNodeName);
+                return;
             }
 
             //If it doesn't exist, then create it and publish it.
@@ -191,7 +197,7 @@ namespace DotSee.AutoNode
             {
                 ///Create and publish the new node
                 //IContent content = cs.CreateContent(rule.NodeName, node.Id, rule.DocTypeAliasToCreate);
-                IContent content = _cs.Create(assignedNodeName, node.GetUdi().Guid, rule.DocTypeAliasToCreate);
+                IContent content = _cs.Create(assignedNodeName, node.Key, rule.DocTypeAliasToCreate);
 
                 if (!string.IsNullOrEmpty(culture))
                 {
@@ -238,6 +244,33 @@ namespace DotSee.AutoNode
             }
         }
 
+        private IContent GetExistingChildNode(IContent node, AutoNodeRule rule, string assignedNodeName="")
+        {
+            //TODO: trycatch and exit if not found
+            int typeIdToCreate = _cts.Get(rule.DocTypeAliasToCreate).Id;
+            
+            long totalRecords;
+            var query = new Query<IContent>(Current.SqlContext);
+
+            //Find if an existing node is already there.
+            //If we find an existing node a new one will NOT be created.
+            //An existing node can be, depending on configuration, a node of the same type OR a node of the same type with the same name.
+
+            IContent existingNode = null;
+
+            if (_cs.HasChildren(node.Id))
+            {
+                existingNode = _cs.GetPagedChildren(node.Id, 0, 1, out totalRecords
+                    , filter: query.Where(
+                        x => x.ContentTypeId == typeIdToCreate
+                        //&& (x.Name.Equals(assignedNodeName, StringComparison.CurrentCultureIgnoreCase) || rule.CreateIfExistsWithDifferentName)
+                       )
+                      ).FirstOrDefault();
+            }
+
+            return (existingNode);
+
+        }
         /// <summary>
         /// Sorts nodes so that our newly inserted node gets to be first in physical order
         /// </summary>
@@ -279,6 +312,7 @@ namespace DotSee.AutoNode
                     else
                     {
                         assignedNodeName = lsvc.GetDictionaryItemByKey(rule.DictionaryItemForName).Translations.First().Value;
+                        
                     }
                 }
                 catch (Exception ex)

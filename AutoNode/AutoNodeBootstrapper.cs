@@ -1,8 +1,7 @@
-﻿using Umbraco.Core.Logging;
-using Umbraco.Core;
+﻿using Umbraco.Core;
 using Umbraco.Core.Composing;
 using Umbraco.Core.Events;
-
+using Umbraco.Core.Logging;
 using Umbraco.Core.Services;
 using Umbraco.Core.Services.Implement;
 
@@ -18,7 +17,6 @@ namespace DotSee.AutoNode
 
     public class SubscribeToContentServicePublishedComponent : IComponent
     {
-
         private readonly ILogger _logger;
         private readonly IContentService _cs;
         private readonly IContentTypeService _cts;
@@ -32,8 +30,8 @@ namespace DotSee.AutoNode
             _cts = cts;
             _rp = new ConfigFileRuleProvider();
             _autoNode = new AutoNode(_logger, _cs, _cts, _rp);
-
         }
+
         public void Initialize()
         {
             ContentService.Published += ContentServicePublished;
@@ -41,7 +39,6 @@ namespace DotSee.AutoNode
 
         private void ContentServicePublished(IContentService sender, ContentPublishedEventArgs e)
         {
-            
             foreach (var node in e.PublishedEntities)
             {
                 _autoNode.Run(node);
