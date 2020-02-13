@@ -37,8 +37,7 @@ namespace DotSee.AutoNode
 
         #region Constructors
 
-        
-        public AutoNode(ILogger logger, IContentService cs, IContentTypeService cts, IRuleProvider rp=null)
+        public AutoNode(ILogger logger, IContentService cs, IContentTypeService cts, IRuleProvider rp = null)
         {
             _rules = new List<AutoNodeRule>();
             _rulesLoaded = false;
@@ -74,14 +73,14 @@ namespace DotSee.AutoNode
         /// Applies all rules on creation of a node.
         /// </summary>
         /// <param name="node">The newly created node we need to apply rules for</param>
-        public void Run(IContent node)
+        public void Run(IContent node, bool saveOnly = false)
         {
             if (_rules != null && _rules.Count() > 0)
             {
                 _rulesLoaded = true;
             }
 
-            if (!_rulesLoaded && _rp!=null)
+            if (!_rulesLoaded && _rp != null)
             {
                 foreach (AutoNodeRule r in (_rp.GetRules(_logger)))
                 {
@@ -95,7 +94,7 @@ namespace DotSee.AutoNode
                 return;
             }
 
-                string createdDocTypeAlias = node.ContentType.Alias;
+            string createdDocTypeAlias = node.ContentType.Alias;
 
             bool hasChildren = _cs.HasChildren(node.Id);
 
@@ -103,7 +102,7 @@ namespace DotSee.AutoNode
             {
                 if (rule.CreatedDocTypeAlias.InvariantEquals(createdDocTypeAlias))
                 {
-                    CreateNewNode(node, rule, hasChildren);
+                    CreateNewNode(node, rule, hasChildren, saveOnly);
                 }
             }
         }
@@ -118,7 +117,7 @@ namespace DotSee.AutoNode
         /// <param name="node">The node to create a new node under</param>
         /// <param name="rule">The rule that will apply settings for the new node's creation</param>
         /// <param name="hasChildren">Indicates if the node has children</param>
-        private void CreateNewNode(IContent node, AutoNodeRule rule, bool hasChildren)
+        private void CreateNewNode(IContent node, AutoNodeRule rule, bool hasChildren, bool saveOnly)
         {
             _logger.Info<AutoNode>(Resources.InfoTryCreateNode, rule.DocTypeAliasToCreate, node.Id.ToString(), node.ContentType.Alias.ToString());
 
@@ -132,21 +131,20 @@ namespace DotSee.AutoNode
 
             if (node.AvailableCultures.Count() == 0)
             {
-                CreateNewNodeCultureAware(node, rule, "");
+                CreateNewNodeCultureAware(node, rule, "", saveOnly);
             }
             else
             {
                 foreach (string culture in node.AvailableCultures)
                 {
-                    CreateNewNodeCultureAware(node, rule, culture);
+                    CreateNewNodeCultureAware(node, rule, culture, saveOnly);
                 }
             }
         }
 
-
-        private void PublishExistingChildNode(IContent node, IContent existingNode, string culture="", string assignedNodeName="")
+        private void PublishExistingChildNode(IContent node, IContent existingNode, string culture = "", string assignedNodeName = "")
         {
-            if (existingNode==null) { return; }
+            if (existingNode == null) { return; }
 
             //If the parent is NOT published, abort process.
             if (!node.Published)
@@ -158,7 +156,7 @@ namespace DotSee.AutoNode
             //If it exists already but is not published and parent is published, republish
             //if (!existingNode.Published && node.Published)
             //{
-                _logger.Info<AutoNode>(Resources.InfoRepublishingExistingNode);
+            _logger.Info<AutoNode>(Resources.InfoRepublishingExistingNode);
             if (!string.IsNullOrEmpty(culture) && !existingNode.AvailableCultures.Any(x => x.InvariantEquals(culture)))
             {
                 ContentCultureInfos cinfo = new ContentCultureInfos(culture);
@@ -166,18 +164,17 @@ namespace DotSee.AutoNode
                 existingNode.CultureInfos.Add(cinfo);
             }
 
-                //Republish the node
-                var result = _cs.SaveAndPublish(existingNode, raiseEvents: true);
-                if (!result.Success)
-                {
-                    _logger.Error<AutoNode>(String.Format(Resources.ErrorRepublishNoSuccess, existingNode.Name, node.Name));
-                }
-                return;
+            //Republish the node
+            var result = _cs.SaveAndPublish(existingNode, raiseEvents: true);
+            if (!result.Success)
+            {
+                _logger.Error<AutoNode>(String.Format(Resources.ErrorRepublishNoSuccess, existingNode.Name, node.Name));
+            }
+            return;
             //}
         }
 
-
-        private void CreateNewNodeCultureAware(IContent node, AutoNodeRule rule, string culture)
+        private void CreateNewNodeCultureAware(IContent node, AutoNodeRule rule, string culture, bool saveOnly)
         {
             //Get the node name that is supposed to be given to the new node.
             string assignedNodeName = GetAssignedNodeName(node, rule, culture);
@@ -208,20 +205,12 @@ namespace DotSee.AutoNode
 
                 bool success = false;
 
-                if (!rule.KeepNewNodeUnpublished)
-                {
-                    //Publish the new node
-                    var result = (string.IsNullOrEmpty(culture))
-                        ? _cs.SaveAndPublish(content, raiseEvents: false, culture: null)
-                        : _cs.SaveAndPublish(content, raiseEvents: false, culture: culture);
+                //Publish the new node
+                var result = (string.IsNullOrEmpty(culture))
+                    ? _cs.SaveAndPublish(content, raiseEvents: true, culture: null)
+                    : _cs.SaveAndPublish(content, raiseEvents: true, culture: culture);
 
-                    success = result.Success;
-                }
-                else
-                {
-                    var result = _cs.Save(content, raiseEvents: false);
-                    success = result.Success;
-                }
+                success = result.Success;
 
                 if (!success)
                 {
@@ -232,7 +221,18 @@ namespace DotSee.AutoNode
                 if (rule.BringNewNodeFirst)
                 {
                     _logger.Info<AutoNode>(Resources.InfoSortingNodes);
-                    _cs.Sort(BringLastNodeFirst(node));
+                    var sortedNodes = BringLastNodeFirst(node);
+                    if (sortedNodes != Enumerable.Empty<IContent>())
+                    {
+                        _cs.Sort(sortedNodes);
+                    }
+                }
+
+                //Don't ask! Experienced some strange errors when trying to only save content so
+                //the only viable solution was to publish first and unpublish right afterwards...
+                if (rule.KeepNewNodeUnpublished)
+                {
+                    _cs.Unpublish(content);
                 }
 
                 _logger.Info<AutoNode>(String.Format(Resources.InfoCreateNodeSuccess, assignedNodeName, node.Name));
@@ -244,11 +244,11 @@ namespace DotSee.AutoNode
             }
         }
 
-        private IContent GetExistingChildNode(IContent node, AutoNodeRule rule, string assignedNodeName="")
+        private IContent GetExistingChildNode(IContent node, AutoNodeRule rule, string assignedNodeName = "")
         {
             //TODO: trycatch and exit if not found
             int typeIdToCreate = _cts.Get(rule.DocTypeAliasToCreate).Id;
-            
+
             long totalRecords;
             var query = new Query<IContent>(Current.SqlContext);
 
@@ -269,8 +269,8 @@ namespace DotSee.AutoNode
             }
 
             return (existingNode);
-
         }
+
         /// <summary>
         /// Sorts nodes so that our newly inserted node gets to be first in physical order
         /// </summary>
@@ -279,7 +279,13 @@ namespace DotSee.AutoNode
         private IEnumerable<IContent> BringLastNodeFirst(IContent node)
         {
             int cnt = _cs.CountChildren(node.Id);
-            if (cnt == 0) { yield break; }
+            if (cnt <=1 ) { return Enumerable.Empty<IContent>(); }
+
+            return BringLastNodeFirstDo(node, cnt);
+        }
+
+        private IEnumerable<IContent> BringLastNodeFirstDo(IContent node, int cnt)
+        {
             long totalRecords;
             yield return _cs.GetPagedChildren(node.Id, 0, cnt, out totalRecords).Last();
 
@@ -312,7 +318,6 @@ namespace DotSee.AutoNode
                     else
                     {
                         assignedNodeName = lsvc.GetDictionaryItemByKey(rule.DictionaryItemForName).Translations.First().Value;
-                        
                     }
                 }
                 catch (Exception ex)

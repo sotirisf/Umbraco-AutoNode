@@ -34,14 +34,14 @@ namespace DotSee.AutoNode
 
         public void Initialize()
         {
-            ContentService.Published += ContentServicePublished;
+            ContentService.Published += ContentService_Published;
         }
 
-        private void ContentServicePublished(IContentService sender, ContentPublishedEventArgs e)
+        private void ContentService_Published(IContentService sender, ContentPublishedEventArgs e)
         {
             foreach (var node in e.PublishedEntities)
             {
-                _autoNode.Run(node);
+                _autoNode.Run(node, saveOnly:false);
             }
         }
 
