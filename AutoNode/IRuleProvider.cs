@@ -5,6 +5,7 @@ namespace DotSee.AutoNode
 {
     public interface IRuleProvider
     {
-        List<AutoNodeRule> GetRules(ILogger logger);
+        Dictionary<string, string> GetSettings();
+        List<AutoNodeRule> GetRules();
     }
 }

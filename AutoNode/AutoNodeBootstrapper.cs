@@ -1,4 +1,5 @@
-﻿using Umbraco.Core;
+﻿using System.Linq;
+using Umbraco.Core;
 using Umbraco.Core.Composing;
 using Umbraco.Core.Events;
 using Umbraco.Core.Logging;
@@ -28,7 +29,7 @@ namespace DotSee.AutoNode
             _logger = logger;
             _cs = cs;
             _cts = cts;
-            _rp = new ConfigFileRuleProvider();
+            _rp = new ConfigFileRuleProvider(_logger);
             _autoNode = new AutoNode(_logger, _cs, _cts, _rp);
         }
 
@@ -41,7 +42,18 @@ namespace DotSee.AutoNode
         {
             foreach (var node in e.PublishedEntities)
             {
-                _autoNode.Run(node, saveOnly:false);
+                if (!node.AvailableCultures.Any())
+                {
+                    _autoNode.Run(node);
+                }
+                else
+                {
+                    foreach (var c in node.AvailableCultures.Where(x => e.HasPublishedCulture(node, x)))
+                    {
+                        _autoNode.Run(node, c);
+                    }
+                }
+                 
             }
         }
 

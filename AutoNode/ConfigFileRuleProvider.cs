@@ -11,30 +11,62 @@ namespace DotSee.AutoNode
 {
     public class ConfigFileRuleProvider : IRuleProvider
     {
-        public List<AutoNodeRule> GetRules(ILogger logger)
-        {
-            XmlDocument xmlConfig = new XmlDocument();
-            List<AutoNodeRule> retVal = new List<AutoNodeRule>();
 
+        private XmlDocument _xmlConfig = null;
+        private ILogger _logger;
+
+        public ConfigFileRuleProvider(ILogger logger)
+        {
+            _logger = logger;
+        }
+
+        private void GetOrUpdateXmlConfig()
+        {
+            _xmlConfig = (_xmlConfig == null) ? LoadXmlConfig() : _xmlConfig;
+        }
+
+        private XmlDocument LoadXmlConfig()
+        {
+
+            XmlDocument retVal = new XmlDocument();
             try
             {
                 IGlobalSettings gs = new GlobalSettings();
-                xmlConfig.Load(HostingEnvironment.MapPath(gs.Path + "/../config/autoNode.config"));
+                retVal.Load(HostingEnvironment.MapPath(gs.Path + "/../config/autoNode.config"));
             }
             catch (FileNotFoundException ex)
             {
-                logger.Error<AutoNode>(ex, Resources.ErrorConfigNotFound);
-
+                _logger.Error<AutoNode>(ex, Resources.ErrorConfigNotFound);
                 return null;
             }
             catch (Exception ex)
             {
-                logger.Error<AutoNode>(ex, Resources.ErrorLoadConfig);
+                _logger.Error<AutoNode>(ex, Resources.ErrorLoadConfig);
                 return null;
             }
-            logger.Info<AutoNode>(Resources.InfoLoadingConfig);
+            _logger.Info<AutoNode>(Resources.InfoLoadingConfig);
+            return retVal;
+        }
+        
+        public Dictionary<string, string> GetSettings()
+        {
+            GetOrUpdateXmlConfig();
 
-            foreach (XmlNode xmlConfigEntry in xmlConfig.SelectNodes("/autoNode/rule"))
+            Dictionary<string, string> retVal = new Dictionary<string, string>();
+            foreach (XmlAttribute attr in _xmlConfig.SelectSingleNode("/autoNode").Attributes)
+            {
+                retVal.Add(attr.Name, attr.Value);
+            }
+            return retVal;
+        }
+
+        public List<AutoNodeRule> GetRules()
+        {
+            GetOrUpdateXmlConfig();
+
+            List<AutoNodeRule> retVal = new List<AutoNodeRule>();
+
+            foreach (XmlNode xmlConfigEntry in _xmlConfig.SelectNodes("/autoNode/rule"))
             {
                 if (xmlConfigEntry.NodeType == XmlNodeType.Element)
                 {
@@ -62,11 +94,26 @@ namespace DotSee.AutoNode
                       ? bool.Parse(xmlConfigEntry.Attributes["keepNewNodeUnpublished"].Value)
                       : false;
 
-                    var rule = new AutoNodeRule(createdDocTypeAlias, docTypeAliasToCreate, nodeName, bringNewNodeFirst, onlyCreateIfNoChildren, createIfExistsWithDifferentName, dictionaryItemForName, keepNewNodeUnpublished);
+                    string blueprint = (xmlConfigEntry.Attributes["blueprint"] != null)
+                      ? xmlConfigEntry.Attributes["blueprint"].Value
+                      : "";
+
+                    var rule = new AutoNodeRule(
+                            createdDocTypeAlias
+                            , docTypeAliasToCreate
+                            , nodeName
+                            , bringNewNodeFirst
+                            , onlyCreateIfNoChildren
+                            , createIfExistsWithDifferentName
+                            , dictionaryItemForName
+                            , keepNewNodeUnpublished
+                            , blueprint);
+
                     retVal.Add(rule);
                 }
             }
-            logger.Info<AutoNode>(Resources.InfoLoadConfigComplete);
+            _logger.Info<AutoNode>(Resources.InfoLoadConfigComplete);
+
             return retVal;
         }
     }
