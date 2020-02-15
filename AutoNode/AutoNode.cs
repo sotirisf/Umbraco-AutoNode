@@ -233,7 +233,8 @@ namespace DotSee.AutoNode
 
                     bool success = false;
 
-                    if (!_cs.GetById(content.ParentId).Published)
+                    //Keep new node unpublished only for non-variants. Variants come up with strange errors here!
+                    if (rule.KeepNewNodeUnpublished && string.IsNullOrEmpty(culture))
                     {
                         var result =_cs.Save(content);
                         success = result.Success;
@@ -252,8 +253,8 @@ namespace DotSee.AutoNode
                         _logger.Error<AutoNode>(String.Format(Resources.ErrorCreateNode, assignedNodeName, node.Name));
                         return;
                     }
-
                 }
+
                 // Bring the new node first if rule dictates so
                 if (rule.BringNewNodeFirst)
                 {
@@ -262,17 +263,16 @@ namespace DotSee.AutoNode
                         _logger.Info<AutoNode>(Resources.InfoSortingNodes);
                     }
                     var sortedNodes = BringLastNodeFirst(node);
+                    
+                    //Only sort when more than 1
                     if (sortedNodes != Enumerable.Empty<IContent>())
                     {
-                        _cs.Sort(sortedNodes);
+                        var result = _cs.Sort(sortedNodes.Select(x=>x.Id), raiseEvents:false);
+                        if (!result.Success)
+                        {
+                            _logger.Error<AutoNode>(Resources.ErrorSortFailed);
+                        }
                     }
-                }
-
-                //Don't ask! Experienced some strange errors when trying to only save content so
-                //the only viable solution was to publish first and unpublish right afterwards...
-                if (rule.KeepNewNodeUnpublished)
-                {
-                    _cs.Unpublish(content, culture == "" ? "*" : culture);
                 }
 
                 if (_logVerbose)
@@ -306,7 +306,7 @@ namespace DotSee.AutoNode
                 existingNode = _cs.GetPagedChildren(node.Id, 0, 1, out totalRecords
                     , filter: query.Where(
                         x => x.ContentTypeId == typeIdToCreate
-                        //&& (x.Name.Equals(assignedNodeName, StringComparison.CurrentCultureIgnoreCase) || rule.CreateIfExistsWithDifferentName)
+                        && (x.Name.Equals(assignedNodeName, StringComparison.CurrentCultureIgnoreCase) || rule.CreateIfExistsWithDifferentName)
                        )
                       ).FirstOrDefault();
             }

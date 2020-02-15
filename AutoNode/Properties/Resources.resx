@@ -135,6 +135,9 @@
   <data name="ErrorRepublishNoSuccess" xml:space="preserve">
     <value>AutoNode: Node '{0}' was not republished successfully under node '{1}'.</value>
   </data>
+  <data name="ErrorSortFailed" xml:space="preserve">
+    <value>AutoNode: Bring new node first failed.</value>
+  </data>
   <data name="InfoAbortCreateNodeNodeExists" xml:space="preserve">
     <value>AutoNode: Aborting node creation since node already exists</value>
   </data>

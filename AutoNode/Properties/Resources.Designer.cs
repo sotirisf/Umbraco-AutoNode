@@ -115,6 +115,15 @@ namespace DotSee.AutoNode.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to AutoNode: Bring new node first failed..
+        /// </summary>
+        internal static string ErrorSortFailed {
+            get {
+                return ResourceManager.GetString("ErrorSortFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to AutoNode: Aborting node creation since node already exists.
         /// </summary>
         internal static string InfoAbortCreateNodeNodeExists {
