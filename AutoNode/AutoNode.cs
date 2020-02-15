@@ -1,7 +1,6 @@
 ﻿using DotSee.AutoNode.Properties;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using Umbraco.Core;
 using Umbraco.Core.Composing;
@@ -84,6 +83,7 @@ namespace DotSee.AutoNode
         /// Applies all rules on creation of a node.
         /// </summary>
         /// <param name="node">The newly created node we need to apply rules for</param>
+        /// <param name="culture">The culture name, or empty string for non-variants</param>
         public void Run(IContent node, string culture = "")
         {
             if (_rules != null && _rules.Count() > 0)
@@ -131,7 +131,8 @@ namespace DotSee.AutoNode
         /// <param name="node">The node to create a new node under</param>
         /// <param name="rule">The rule that will apply settings for the new node's creation</param>
         /// <param name="hasChildren">Indicates if the node has children</param>
-        private void CreateOrPublishNode(IContent node, AutoNodeRule rule, bool hasChildren, string culture="")
+        /// <param name="culture">The culture name, or empty string for non-variants</param>
+        private void CreateOrPublishNode(IContent node, AutoNodeRule rule, bool hasChildren, string culture = "")
         {
             if (_logVerbose)
             {
@@ -148,9 +149,16 @@ namespace DotSee.AutoNode
                 return;
             }
 
-                CreateNewNodeCultureAware(node, rule, culture);
+            CreateNewNodeCultureAware(node, rule, culture);
         }
 
+        /// <summary>
+        /// Publishes an existing child node
+        /// </summary>
+        /// <param name="node">The parent node</param>
+        /// <param name="existingNode">The node to be published</param>
+        /// <param name="culture">The culture name, or empty string for non-variants</param>
+        /// <param name="assignedNodeName">The name to be given to the new node according to rule settings</param>
         private void PublishExistingChildNode(IContent node, IContent existingNode, string culture = "", string assignedNodeName = "")
         {
             if (existingNode == null) { return; }
@@ -176,17 +184,25 @@ namespace DotSee.AutoNode
                 cinfo.Name = string.IsNullOrEmpty(assignedNodeName) ? node.CultureInfos.Values.Where(x => !string.IsNullOrEmpty(x.Name)).FirstOrDefault().Name : assignedNodeName;
                 existingNode.CultureInfos.Add(cinfo);
             }
-            
-            //Republish the node
-            var result = _cs.SaveAndPublish(existingNode, culture, raiseEvents: true);
-            if (!result.Success)
+
+            //Republish the node if there are no pending changes
+            if (!existingNode.Edited)
             {
-                _logger.Error<AutoNode>(String.Format(Resources.ErrorRepublishNoSuccess, existingNode.Name, node.Name));
+                var result = _cs.SaveAndPublish(existingNode, culture, raiseEvents: true);
+                if (!result.Success)
+                {
+                    _logger.Error<AutoNode>(String.Format(Resources.ErrorRepublishNoSuccess, existingNode.Name, node.Name));
+                }
+                return;
             }
-            return;
-            
         }
 
+        /// <summary>
+        /// Creates a new node.
+        /// </summary>
+        /// <param name="node">The parent node.</param>
+        /// <param name="rule">The rule being processed</param>
+        /// <param name="culture">The culture name, or empty string for non-variants</param>
         private void CreateNewNodeCultureAware(IContent node, AutoNodeRule rule, string culture)
         {
             //Get the node name that is supposed to be given to the new node.
@@ -208,14 +224,10 @@ namespace DotSee.AutoNode
                 else
                 {
                     //If it doesn't exist, then create it and publish it.
-                    
-                    if (!string.IsNullOrEmpty(rule.Blueprint))
+                    IContent bp = GetBlueprint(rule);
+
+                    if (bp != null)
                     {
-                        var contentTypeId = _cts.GetAllContentTypeIds(new string[] { rule.DocTypeAliasToCreate }).FirstOrDefault();
-
-                        var bps = _cs.GetBlueprintsForContentTypes(contentTypeId);
-                        var bp = bps.Where(x => x.Name == rule.Blueprint).FirstOrDefault();
-
                         content = _cs.CreateContentFromBlueprint(bp, assignedNodeName);
                         content.SetParent(node);
                     }
@@ -228,7 +240,6 @@ namespace DotSee.AutoNode
                             cinfo.Name = assignedNodeName;
                             content.CultureInfos.Add(cinfo);
                         }
-
                     }
 
                     bool success = false;
@@ -236,7 +247,7 @@ namespace DotSee.AutoNode
                     //Keep new node unpublished only for non-variants. Variants come up with strange errors here!
                     if (rule.KeepNewNodeUnpublished && string.IsNullOrEmpty(culture))
                     {
-                        var result =_cs.Save(content);
+                        var result = _cs.Save(content);
                         success = result.Success;
                     }
                     else
@@ -263,11 +274,11 @@ namespace DotSee.AutoNode
                         _logger.Info<AutoNode>(Resources.InfoSortingNodes);
                     }
                     var sortedNodes = BringLastNodeFirst(node);
-                    
+
                     //Only sort when more than 1
                     if (sortedNodes != Enumerable.Empty<IContent>())
                     {
-                        var result = _cs.Sort(sortedNodes.Select(x=>x.Id), raiseEvents:false);
+                        var result = _cs.Sort(sortedNodes.Select(x => x.Id), raiseEvents: false);
                         if (!result.Success)
                         {
                             _logger.Error<AutoNode>(Resources.ErrorSortFailed);
@@ -287,6 +298,31 @@ namespace DotSee.AutoNode
             }
         }
 
+        /// <summary>
+        /// Gets a blueprint specified on a rule.
+        /// </summary>
+        /// <param name="rule">The rule in which the blueprint is specified</param>
+        /// <returns>Null if the blueprint is not found</returns>
+        private IContent GetBlueprint(AutoNodeRule rule)
+        {
+            if (string.IsNullOrEmpty(rule.Blueprint)) { return null; }
+            var contentTypeId = _cts.GetAllContentTypeIds(new string[] { rule.DocTypeAliasToCreate }).FirstOrDefault();
+            if (contentTypeId <= 0) { return null; }
+            var bps = _cs.GetBlueprintsForContentTypes(contentTypeId);
+            if (bps == null || bps.Count() == 0) { return null; }
+            var bp = bps.Where(x => x.Name == rule.Blueprint).FirstOrDefault();
+            return bp;
+        }
+
+        /// <summary>
+        /// Gets an existing child node
+        /// </summary>
+        /// <param name="node">The parent node</param>
+        /// <param name="rule">The rule being processed</param>
+        /// <param name="assignedNodeName">The name the rule dictates for a new node.
+        /// This will be used when checking whether to create a new node or not,
+        /// depending on whether the rule's setting "createIfExistsWithDifferentName" is set to true</param>
+        /// <returns>Null if there is no existing node fulfilling the critera or the node if it exists.</returns>
         private IContent GetExistingChildNode(IContent node, AutoNodeRule rule, string assignedNodeName = "")
         {
             //TODO: trycatch and exit if not found
@@ -298,7 +334,6 @@ namespace DotSee.AutoNode
             //Find if an existing node is already there.
             //If we find an existing node a new one will NOT be created.
             //An existing node can be, depending on configuration, a node of the same type OR a node of the same type with the same name.
-
             IContent existingNode = null;
 
             if (_cs.HasChildren(node.Id))
@@ -306,7 +341,7 @@ namespace DotSee.AutoNode
                 existingNode = _cs.GetPagedChildren(node.Id, 0, 1, out totalRecords
                     , filter: query.Where(
                         x => x.ContentTypeId == typeIdToCreate
-                        && (x.Name.Equals(assignedNodeName, StringComparison.CurrentCultureIgnoreCase) || rule.CreateIfExistsWithDifferentName)
+                        && (x.Name.Equals(assignedNodeName, StringComparison.CurrentCultureIgnoreCase) || !rule.CreateIfExistsWithDifferentName)
                        )
                       ).FirstOrDefault();
             }
@@ -318,15 +353,21 @@ namespace DotSee.AutoNode
         /// Sorts nodes so that our newly inserted node gets to be first in physical order
         /// </summary>
         /// <param name="node">The node to bring first</param>
-        /// <returns></returns>
+        /// <returns>A list of nodes sorted in the desired way</returns>
         private IEnumerable<IContent> BringLastNodeFirst(IContent node)
         {
             int cnt = _cs.CountChildren(node.Id);
-            if (cnt <=1 ) { return Enumerable.Empty<IContent>(); }
+            if (cnt <= 1) { return Enumerable.Empty<IContent>(); }
 
             return BringLastNodeFirstDo(node, cnt);
         }
 
+        /// <summary>
+        /// Brings the last node first
+        /// </summary>
+        /// <param name="node">The node to be first</param>
+        /// <param name="cnt">The total number of nodes to be sorted</param>
+        /// <returns>A list of nodes sorted in the desired way</returns>
         private IEnumerable<IContent> BringLastNodeFirstDo(IContent node, int cnt)
         {
             long totalRecords;
@@ -343,6 +384,7 @@ namespace DotSee.AutoNode
         /// </summary>
         /// <param name="node">The node under which the new node will be created</param>
         /// <param name="rule">The rule being processed</param>
+        /// <param name="culture">The culture name, or empty string for non-variants</param>
         /// <returns></returns>
         private string GetAssignedNodeName(IContent node, AutoNodeRule rule, string culture)
         {
@@ -378,4 +420,3 @@ namespace DotSee.AutoNode
         #endregion Private Methods
     }
 }
-
