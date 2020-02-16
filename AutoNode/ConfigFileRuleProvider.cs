@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Web.Hosting;
 using System.Xml;
 using Umbraco.Core.Configuration;
@@ -14,20 +15,47 @@ namespace DotSee.AutoNode
 
         private XmlDocument _xmlConfig = null;
         private ILogger _logger;
+        private IEnumerable<AutoNodeRule> _rules;
+        private Dictionary<string, string> _settings;
 
         public ConfigFileRuleProvider(ILogger logger)
         {
             _logger = logger;
+            _settings = new Dictionary<string, string>();
         }
 
-        private void GetOrUpdateXmlConfig()
+        public XmlDocument XmlConfig
         {
-            _xmlConfig = (_xmlConfig == null) ? LoadXmlConfig() : _xmlConfig;
+            get
+            {
+                return (_xmlConfig == null) ? GetConfigFromXml() : _xmlConfig;
+            }
         }
 
-        private XmlDocument LoadXmlConfig()
+        public IEnumerable<AutoNodeRule> Rules
         {
+            get { 
+            return (_rules == null || !_rules.Any()) ? GetRules() : _rules;
+            }
+        }
 
+        public Dictionary<string,string> Settings
+        {
+            get
+            {
+                return (_settings == null || !_settings.Any()) ? GetSettings() : _settings;
+            }
+        }
+
+        public void ReloadData()
+        {
+            _rules = null;
+            _settings = new Dictionary<string,string>();
+            _xmlConfig = null;
+        }
+
+        private XmlDocument GetConfigFromXml()
+        {
             XmlDocument retVal = new XmlDocument();
             try
             {
@@ -45,28 +73,28 @@ namespace DotSee.AutoNode
                 return null;
             }
             _logger.Info<AutoNode>(Resources.InfoLoadingConfig);
+            _xmlConfig = retVal;
             return retVal;
         }
         
-        public Dictionary<string, string> GetSettings()
+        private Dictionary<string, string> GetSettings()
         {
-            GetOrUpdateXmlConfig();
-
             Dictionary<string, string> retVal = new Dictionary<string, string>();
-            foreach (XmlAttribute attr in _xmlConfig.SelectSingleNode("/autoNode").Attributes)
+            foreach (XmlAttribute attr in XmlConfig.SelectSingleNode("/autoNode").Attributes)
             {
                 retVal.Add(attr.Name, attr.Value);
             }
+
+            _settings = retVal;
+
             return retVal;
         }
 
-        public List<AutoNodeRule> GetRules()
+        private List<AutoNodeRule> GetRules()
         {
-            GetOrUpdateXmlConfig();
-
             List<AutoNodeRule> retVal = new List<AutoNodeRule>();
 
-            foreach (XmlNode xmlConfigEntry in _xmlConfig.SelectNodes("/autoNode/rule"))
+            foreach (XmlNode xmlConfigEntry in XmlConfig.SelectNodes("/autoNode/rule"))
             {
                 if (xmlConfigEntry.NodeType == XmlNodeType.Element)
                 {
@@ -113,6 +141,8 @@ namespace DotSee.AutoNode
                 }
             }
             _logger.Info<AutoNode>(Resources.InfoLoadConfigComplete);
+
+            _rules = retVal;
 
             return retVal;
         }

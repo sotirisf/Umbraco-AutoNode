@@ -93,7 +93,7 @@ namespace DotSee.AutoNode
 
             if (!_rulesLoaded && _rp != null)
             {
-                foreach (AutoNodeRule r in (_rp.GetRules()))
+                foreach (AutoNodeRule r in (_rp.Rules))
                 {
                     _rules.Add(r);
                 }
@@ -105,7 +105,7 @@ namespace DotSee.AutoNode
                 return;
             }
 
-            _settings = _rp.GetSettings();
+            _settings = _rp.Settings;
             _logVerbose = (_settings["logLevel"] != null && _settings["logLevel"] == "Verbose");
 
             string createdDocTypeAlias = node.ContentType.Alias;
