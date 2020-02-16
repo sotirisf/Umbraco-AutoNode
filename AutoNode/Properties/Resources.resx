@@ -132,6 +132,9 @@
   <data name="ErrorLoadConfig" xml:space="preserve">
     <value>AutoNode: There was a problem loading AutoNode configuration from the config file</value>
   </data>
+  <data name="ErrorNodeAliasNotFound" xml:space="preserve">
+    <value>AutoNode: Document type "{0}" does not exist. Aborting.</value>
+  </data>
   <data name="ErrorRepublishNoSuccess" xml:space="preserve">
     <value>AutoNode: Node '{0}' was not republished successfully under node '{1}'.</value>
   </data>

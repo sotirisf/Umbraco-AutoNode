@@ -205,6 +205,13 @@ namespace DotSee.AutoNode
         /// <param name="culture">The culture name, or empty string for non-variants</param>
         private void CreateNewNodeCultureAware(IContent node, AutoNodeRule rule, string culture)
         {
+
+            if (_cts.Get(rule.DocTypeAliasToCreate) == null)
+            {
+                _logger.Error<AutoNode>(string.Format(Resources.ErrorNodeAliasNotFound, rule.DocTypeAliasToCreate));
+                return;
+            }
+
             //Get the node name that is supposed to be given to the new node.
             string assignedNodeName = GetAssignedNodeName(node, rule, culture);
 

@@ -106,6 +106,15 @@ namespace DotSee.AutoNode.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to AutoNode: Document type &quot;{0}&quot; does not exist. Aborting..
+        /// </summary>
+        internal static string ErrorNodeAliasNotFound {
+            get {
+                return ResourceManager.GetString("ErrorNodeAliasNotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to AutoNode: Node &apos;{0}&apos; was not republished successfully under node &apos;{1}&apos;..
         /// </summary>
         internal static string ErrorRepublishNoSuccess {
