@@ -188,7 +188,7 @@ namespace DotSee.AutoNode
             //Republish the node if there are no pending changes
             if (!existingNode.Edited)
             {
-                var result = _cs.SaveAndPublish(existingNode, culture, raiseEvents: true);
+                var result = _cs.SaveAndPublish(existingNode, (string.IsNullOrEmpty(culture) ? "*": culture), raiseEvents: true);
                 if (!result.Success)
                 {
                     _logger.Error<AutoNode>(String.Format(Resources.ErrorRepublishNoSuccess, existingNode.Name, node.Name));
@@ -280,7 +280,16 @@ namespace DotSee.AutoNode
                     {
                         _logger.Info<AutoNode>(Resources.InfoSortingNodes);
                     }
-                    var sortedNodes = BringLastNodeFirst(node);
+
+                    IEnumerable<IContent> sortedNodes = Enumerable.Empty<IContent>();
+                    if (existingNode == null)
+                    {
+                        sortedNodes = BringLastNodeFirst(node);
+                    }
+                    else
+                    {
+                        sortedNodes = BringExistingNodeFirst(node, existingNode);
+                    }
 
                     //Only sort when more than 1
                     if (sortedNodes != Enumerable.Empty<IContent>())
@@ -356,6 +365,27 @@ namespace DotSee.AutoNode
             return (existingNode);
         }
 
+
+        private IEnumerable<IContent> BringExistingNodeFirst(IContent node, IContent existingNode)
+        {
+            int cnt = _cs.CountChildren(node.Id);
+            if (cnt <= 1) { return Enumerable.Empty<IContent>(); }
+            return BringExistingNodeFirstDo(node, existingNode, cnt);
+
+        }
+
+        private IEnumerable<IContent> BringExistingNodeFirstDo(IContent node, IContent existingNode, int cnt)
+        {
+            long totalRecords;
+            yield return existingNode;
+            var restOfNodes = _cs.GetPagedChildren(node.Id, 0, cnt - 1, out totalRecords).Where(x => x.Id != existingNode.Id).OrderBy(x => x.SortOrder);
+            foreach (IContent child in restOfNodes)
+            {
+                yield return child;
+            }
+        }
+
+
         /// <summary>
         /// Sorts nodes so that our newly inserted node gets to be first in physical order
         /// </summary>
@@ -378,9 +408,9 @@ namespace DotSee.AutoNode
         private IEnumerable<IContent> BringLastNodeFirstDo(IContent node, int cnt)
         {
             long totalRecords;
-            yield return _cs.GetPagedChildren(node.Id, 0, cnt, out totalRecords).Last();
-
-            foreach (IContent child in _cs.GetPagedChildren(node.Id, 0, cnt - 1, out totalRecords))
+            yield return _cs.GetPagedChildren(node.Id, 0, cnt, out totalRecords).OrderBy(x => x.SortOrder).Last();
+            var restOfNodes = _cs.GetPagedChildren(node.Id, 0, cnt - 1, out totalRecords).OrderBy(x => x.SortOrder);
+            foreach (IContent child in restOfNodes)
             {
                 yield return child;
             }
