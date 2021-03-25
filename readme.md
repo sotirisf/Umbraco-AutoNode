@@ -1,4 +1,4 @@
-# Umbraco-AutoNode
+# Umbraco-AutoNode for Umbraco v8
 This is a simple plugin that automatically creates new child nodes in the Umbraco back end upon publishing a node, based on a set of user-defined rules.
 
 ## Usage (using configuration file in /config folder)
@@ -28,56 +28,7 @@ Here's an example rule:
 * **dictionaryItemForName (optional)**: The key for a dictionary item which will specify what the name of the new node will be in a multilingual Umbraco installation. This means that new nodes will take their names according to the value of this dictionary entry and names will be different for each language. (The createIfExistsWithDifferentName setting also takes multilingual names under consideration).If the dictionary key is not found or the corresponding dictionary entry contains no value, then it falls back to the default new node name as defined in the rule.
 
 ## Usage (using code)
-You can also register one or more rules for the package on application start. 
-All you need to do is get the AutoNode instance (it's a Singleton) and use the RegisterRule method. 
-You can use both a configuration file and code if you like. All rules will be added.
-
-```csharp
-  AutoNode au = AutoNode.Instance;
-  
-  au.RegisterRule(new AutoNodeRule(
-    createdDocTypealias: "TextPage",
-    docTypeAliasToCreate: "Dummy",
-    nodeName: "Dummy Auto Inserted Node",
-    bringNodeFirst: true,
-    onlyCreateIfNoChildren: false,
-    createIfExistsWithDifferentName: false,
-    dictionaryItemForName: "MyDictionaryKey"
-    ));
-```
-
-You should use this call in the ApplicationStarted event handler,
-in a new class you can create in your App_Code folder like below:
-
-```csharp
-
-using Umbraco.Core;
-using Umbraco.Core.Events;
-using Umbraco.Core.Models;
-using Umbraco.Core.Services;
-
-    public class AutoNodeEvents : ApplicationEventHandler
-    {
-
-        protected override void ApplicationStarted(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
-        {
-            base.ApplicationStarted(umbracoApplication, applicationContext);
-
-            AutoNode au = AutoNode.Instance;
-
-			//This is an example rule, put your own here
- 			au.RegisterRule(new AutoNodeRule(
-    			createdDocTypealias: "TextPage",
-    			docTypeAliasToCreate: "Dummy",
-    			nodeName: "Dummy Auto Inserted Node",
-    			bringNodeFirst: true,
-    			onlyCreateIfNoChildren: false,
-			createIfExistsWithDifferentName: false,
-    			dictionaryItemForName: "MyDictionaryKey"
-			));
-        }
-    }
-```
+Using code wasn't supported in this version
 
 ## Limitations / Warnings
 You should not specify circular rules (i.e. one rule for creating doc B when A is published and one rule for creating doc A when B is published - this will cause an endless loop and leave you with a huge tree if you don't stop it on time :). You can, however, create multiple rules for the same document type. That is, you may want docs B, C, and D to be automatically created when A is published, so you will have to create 3 rules. 

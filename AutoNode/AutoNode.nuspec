@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<package>
+
+  <metadata>
+    <id>DotSee.AutoNode</id>
+    <version>2.0.1</version>
+    <title>DotSee.AutoNode</title>
+    <authors>DotSee Web Services</authors>
+    <owners>DotSee Web Services</owners>
+    <projectUrl>https://github.com/sotirisf/Umbraco-AutoNode.git</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>This is a simple plugin that automatically creates new child nodes in the Umbraco back end upon publishing a node, based on a set of user-defined rules.</description>
+    <copyright>Copyright 2020 DotSee Web Services (https://www.dot-see.com)</copyright>
+    <tags>umbraco autonode</tags>
+	<license type="expression">MIT</license>
+    <references>
+    </references>
+    <dependencies>
+      <group targetFramework=".NETFramework4.7.2">
+      <dependency id="UmbracoCms.Web" version="8.2.2"/>
+	  <dependency id="UmbracoCms.Core" version="8.2.2"/>
+	  </group>
+    </dependencies>
+	
+  </metadata>
+  <files>
+    <file src="bin\Release\DotSee.AutoNode.dll" target="lib\net472" />
+    <file src="autoNode.config" target="content\Config" />
+  </files>
+ 
+</package>
