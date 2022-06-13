@@ -11,10 +11,11 @@
         <RootNamespace>DotSee.AutoNode</RootNamespace>
 		<IncludeBuildOutput>true</IncludeBuildOutput>
 		<AssemblyName>DotSee.AutoNode</AssemblyName>
-		<Version>3.0.1</Version>
+		<Version>3.0.2</Version>
 		<Company>DotSee</Company>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<Authors>Sotiris Filippidis</Authors>
+		<RepositoryUrl>https://github.com/sotirisf/Umbraco-AutoNode</RepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup>
