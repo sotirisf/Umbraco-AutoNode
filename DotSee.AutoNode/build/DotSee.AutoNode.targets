@@ -1,0 +1,23 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+    <PropertyGroup>
+        <DotSeeAutoNodeContentFilesPath>$(MSBuildThisFileDirectory)..\App_Plugins\DotSee.AutoNode\**\*.*</DotSeeAutoNodeContentFilesPath>
+    </PropertyGroup>
+
+    <Target Name="CopyDotSeeAutoNodeAssets" BeforeTargets="Build">
+        <ItemGroup>
+            <DotSeeAutoNodeContentFiles Include="$(DotSeeAutoNodeContentFilesPath)" />
+        </ItemGroup>
+        <Message Text="Copying DotSee.AutoNode files: $(DotSeeAutoNodeContentFilesPath) - #@(DotSeeAutoNodeContentFiles->Count()) files"  Importance="high" />
+        <Copy SourceFiles="@(DotSeeAutoNodeContentFiles)" DestinationFiles="@(DotSeeAutoNodeContentFiles->'$(MSBuildProjectDirectory)\App_Plugins\DotSee.AutoNode\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    </Target>
+
+    <Target Name="ClearDotSeeAutoNodeAssets" BeforeTargets="Clean">
+        <ItemGroup>
+            <DotSeeAutoNodeDir Include="$(MSBuildProjectDirectory)\App_Plugins\DotSee.AutoNode\" />
+        </ItemGroup>
+        <Message Text="Clear old DotSee.AutoNode data"  Importance="high" />
+        <RemoveDir Directories="@(DotSeeAutoNodeDir)"  />
+    </Target>
+
+</Project>

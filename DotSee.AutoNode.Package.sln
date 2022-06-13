@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32421.90
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotSee.AutoNode.Package", "DotSee.AutoNode\DotSee.AutoNode.Package.csproj", "{9852EF30-4C31-4065-85C6-DB6FA3A5A21C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9852EF30-4C31-4065-85C6-DB6FA3A5A21C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9852EF30-4C31-4065-85C6-DB6FA3A5A21C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9852EF30-4C31-4065-85C6-DB6FA3A5A21C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9852EF30-4C31-4065-85C6-DB6FA3A5A21C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F518C9F7-0682-44DF-8225-6C4569BFB83F}
+	EndGlobalSection
+EndGlobal

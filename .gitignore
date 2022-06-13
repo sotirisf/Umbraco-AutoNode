@@ -42,7 +42,6 @@ dlldata.c
 
 # DNX
 project.lock.json
-project.fragment.lock.json
 artifacts/
 
 *_i.c
@@ -158,7 +157,7 @@ PublishScripts/
 # except build/, which is used as an MSBuild target.
 !**/packages/build/
 # Uncomment if necessary however generally it will be regenerated when needed
-!**/packages/repositories.config
+#!**/packages/repositories.config
 # NuGet v3's project.json files produces more ignoreable files
 *.nuget.props
 *.nuget.targets
@@ -251,16 +250,3 @@ paket-files/
 # JetBrains Rider
 .idea/
 *.sln.iml
-
-# Backup & report files from converting an old project file to a newer
-_UpgradeReport_Files/
-Backup*/
-UpgradeLog*.XML
-UpgradeLog*.htm
-
-# Windows image file caches
-Thumbs.db
-ehthumbs.db
-
-# Folder config file
-Desktop.ini

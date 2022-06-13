@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net5.0</TargetFramework>
+        <ContentTargetFolders>.</ContentTargetFolders>
+        <Product>DotSee.AutoNode</Product>
+        <PackageId>DotSee.AutoNode</PackageId>
+        <Title>DotSee.AutoNode</Title>
+        <Description>This is a simple plugin that automatically creates new child nodes in the Umbraco back end upon publishing a node, based on a set of user-defined rules.</Description>
+        <Product>...</Product>
+        <PackageTags>umbraco plugin package</PackageTags>
+        <RootNamespace>DotSee.AutoNode</RootNamespace>
+		<IncludeBuildOutput>true</IncludeBuildOutput>
+		<AssemblyName>DotSee.AutoNode</AssemblyName>
+		<Version>3.0.1</Version>
+		<Company>DotSee</Company>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<Authors>Sotiris Filippidis</Authors>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Umbraco.Cms.Web.Website" Version="9.4.0" />
+        <PackageReference Include="Umbraco.Cms.Web.BackOffice" Version="9.4.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Include="App_Plugins\DotSee.AutoNode\**\*.*">
+            <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+            <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+        </Content>
+        <None Include="build\**\*.*">
+            <Pack>true</Pack>
+            <PackagePath>buildTransitive</PackagePath>
+        </None>
+    </ItemGroup>
+</Project>

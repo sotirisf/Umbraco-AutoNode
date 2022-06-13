@@ -3,16 +3,16 @@
     /// <summary>
     /// Holds rules for automatically creating nodes.
     /// </summary>
-    public class AutoNodeRule
+    public class Rule
     {
         public string CreatedDocTypeAlias { get; set; }
         public string DocTypeAliasToCreate { get; set; }
         public string NodeName { get; set; }
-        public bool BringNewNodeFirst { get; set; }
-        public bool OnlyCreateIfNoChildren { get; set; }
-        public bool CreateIfExistsWithDifferentName { get; set; }
+        public bool? BringNewNodeFirst { get; set; }
+        public bool? OnlyCreateIfNoChildren { get; set; }
+        public bool? CreateIfExistsWithDifferentName { get; set; }
         public string DictionaryItemForName { get; set; }
-        public bool KeepNewNodeUnpublished { get; set; }
+        public bool? KeepNewNodeUnpublished { get; set; }
         public string Blueprint { get; set; }
 
         /// <summary>
@@ -27,16 +27,16 @@
         /// <param name="dictionaryItemForName">Applies the node's name based on the given dictionary entry (default entry: AutoNode.Name)</param>
         /// <param name="keepNewNodeUnpublished">Unpublishes the new node after creation</param>
         /// <param name="blueprint">The name of a content template (blueprint) to apply to the newly created document</param>
-        public AutoNodeRule( 
-            string createdDocTypealias, 
-            string docTypeAliasToCreate, 
-            string nodeName, 
-            bool bringNodeFirst = false, 
-            bool onlyCreateIfNoChildren = false, 
-            bool createIfExistsWithDifferentName = true,
-            string dictionaryItemForName ="AutoNode.Name",
-            bool keepNewNodeUnpublished = false,
-            string blueprint=""
+        public Rule(
+            string createdDocTypealias,
+            string docTypeAliasToCreate,
+            string nodeName,
+            bool? bringNodeFirst = false,
+            bool? onlyCreateIfNoChildren = false,
+            bool? createIfExistsWithDifferentName = true,
+            string dictionaryItemForName = "AutoNode.Name",
+            bool? keepNewNodeUnpublished = false,
+            string blueprint = ""
             )
         {
             CreatedDocTypeAlias = createdDocTypealias;
