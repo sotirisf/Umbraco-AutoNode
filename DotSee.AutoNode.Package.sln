@@ -5,6 +5,8 @@ VisualStudioVersion = 17.1.32421.90
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotSee.AutoNode.Package", "DotSee.AutoNode\DotSee.AutoNode.Package.csproj", "{9852EF30-4C31-4065-85C6-DB6FA3A5A21C}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotSee.AutoNode.Tests", "DotSee.AutoNode.Tests\DotSee.AutoNode.Tests.csproj", "{A8B177A6-5535-47BB-B749-58618221B0AB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{9852EF30-4C31-4065-85C6-DB6FA3A5A21C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9852EF30-4C31-4065-85C6-DB6FA3A5A21C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9852EF30-4C31-4065-85C6-DB6FA3A5A21C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A8B177A6-5535-47BB-B749-58618221B0AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A8B177A6-5535-47BB-B749-58618221B0AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A8B177A6-5535-47BB-B749-58618221B0AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A8B177A6-5535-47BB-B749-58618221B0AB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
