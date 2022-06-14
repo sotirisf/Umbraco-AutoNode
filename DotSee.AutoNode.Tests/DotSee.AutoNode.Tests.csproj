@@ -1,0 +1,60 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="App_Plugins\DotSee.AutoNode\autoNode-Sample.json" />
+    <None Remove="App_Plugins\DotSee.AutoNode\package.manifest" />
+    <None Remove="wwwroot\config\autoNode.config" />
+    <None Remove="wwwroot\config\autoNode.json" />
+    <None Remove="wwwroot\config\DotSee.ResponsiveImages.config" />
+    <None Remove="wwwroot\config\nodeRestrict.config" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="App_Plugins\DotSee.AutoNode\autoNode-Sample.json">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+    </Content>
+    <Content Include="App_Plugins\DotSee.AutoNode\package.manifest">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+    </Content>
+    <Content Include="wwwroot\config\autoNode.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="wwwroot\config\autoNode.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
+    <!--<PackageReference Include="MSTest.TestAdapter" Version="2.2.7" />
+    <PackageReference Include="MSTest.TestFramework" Version="2.2.7" />-->
+    <!--<PackageReference Include="coverlet.collector" Version="3.1.0" />-->
+	  <PackageReference Include="NUnit" Version="3.13.2" />
+	  <PackageReference Include="NUnit3TestAdapter" Version="4.0.0" />
+	  <PackageReference Include="Moq" Version="4.16.1" />
+	
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--<ProjectReference Include="..\DotSee.AutoNode\DotSee.AutoNode.csproj" />-->
+    <ProjectReference Include="..\DotSee.AutoNode\DotSee.AutoNode.Package.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="App_Plugins\DotSee.AutoNode\autoNode.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="App_Plugins\DotSee.AutoNode\autoNode.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
