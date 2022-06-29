@@ -12,12 +12,4 @@
         <Copy SourceFiles="@(DotSeeAutoNodeContentFiles)" DestinationFiles="@(DotSeeAutoNodeContentFiles->'$(MSBuildProjectDirectory)\App_Plugins\DotSee.AutoNode\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     </Target>
 
-    <Target Name="ClearDotSeeAutoNodeAssets" BeforeTargets="Clean">
-        <ItemGroup>
-            <DotSeeAutoNodeDir Include="$(MSBuildProjectDirectory)\App_Plugins\DotSee.AutoNode\" />
-        </ItemGroup>
-        <Message Text="Clear old DotSee.AutoNode data"  Importance="high" />
-        <RemoveDir Directories="@(DotSeeAutoNodeDir)"  />
-    </Target>
-
 </Project>
